@@ -15,6 +15,8 @@ WORKDIR /app
 COPY --from=build --chown=app:app /build/target/*.jar app.jar
 USER app
 
+ENV SPRING_PROFILES_ACTIVE=prod
+
 EXPOSE 8080
 
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75"
