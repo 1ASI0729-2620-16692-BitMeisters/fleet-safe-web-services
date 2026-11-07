@@ -24,8 +24,8 @@ tags:
   - name: Vehicle Documentation
     description: Document types and the documents of each vehicle, with their validity.
 paths:
-  /auth/login:
-    $ref: './identity-and-access.yaml#/paths/~1auth~1login'
+  /tokens:
+    $ref: './identity-and-access.yaml#/paths/~1tokens'
   /users:
     $ref: './identity-and-access.yaml#/paths/~1users'
   /users/{id}:

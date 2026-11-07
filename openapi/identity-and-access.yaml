@@ -3,11 +3,11 @@ info:
   title: FleetSafe API - Identity and Access
   version: 0.1.0
 paths:
-  /auth/login:
+  /tokens:
     post:
       tags: [Identity and Access]
-      operationId: login
-      summary: Sign in
+      operationId: createToken
+      summary: Sign in by creating a token
       description: Validates the credentials and returns an access token. Public.
       security: []
       parameters:
