@@ -70,7 +70,7 @@ Annotating aggregates with JPA forces public setters and no-argument constructor
 1. Keep aggregates free of JPA annotations and setters; state changes go through domain methods.
 2. Map each aggregate to a `*PersistenceEntity` in `infrastructure.persistence.jpa.entities`.
 3. Convert between both with a `*PersistenceAssembler`, used only by the repository adapter (`*RepositoryImpl`) that implements the domain repository interface.
-4. Rebuild an aggregate from the database with a static `restore(...)` factory that sets the stored state without running creation rules or registering events.
+4. Rebuild an aggregate from the database with a static `restore(...)` factory that sets the stored identity, state and timestamps without registering events.
 
 ### Consequences
 - **Positive**: aggregates protect their invariants; the domain does not depend on the database.
@@ -137,7 +137,7 @@ The API serves several transport companies, and every user belongs to one. The w
 
 ### Consequences
 - **Positive**: no session storage; each request carries the company it acts on.
-- **Negative**: a token stays valid until it expires, even if the user is deactivated in the meantime.
+- **Negative**: every request reads its user from the database, so that a deactivated user is rejected before the token expires.
 
 ---
 
