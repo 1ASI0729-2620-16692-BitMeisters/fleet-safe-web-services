@@ -128,7 +128,7 @@ Accepted
 The API serves several transport companies, and every user belongs to one. The web application calls it from another origin.
 
 ### Decision
-1. Authenticate with `POST /api/v1/auth/login`, which returns a signed JWT.
+1. Sign in by creating a token with `POST /api/v1/tokens`, which returns a signed JWT.
 2. Put the user's `role` and `companyId` in the token claims.
 3. Require `Authorization: Bearer <token>` on every other endpoint, with stateless sessions.
 4. Hash passwords with BCrypt.
