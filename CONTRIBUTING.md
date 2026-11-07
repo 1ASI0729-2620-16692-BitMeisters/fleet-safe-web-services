@@ -74,7 +74,7 @@ Examples from this repository:
 feat(documentation): register vehicle documents and list the ones about to expire
 feat(iam): require a valid bearer token on every protected endpoint
 fix(shared): generate timestamps at the precision postgresql stores
-refactor(evaluation): separate the domain from its persistence
+refactor(documentation): keep the calendar out of the rest layer and cover the daily recalculation
 docs(openapi): add the vehicle documentation contract
 chore(config): set the vehicle documentation time zone and status recalculation schedule
 ```
