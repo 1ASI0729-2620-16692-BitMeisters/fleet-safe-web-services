@@ -153,8 +153,9 @@ The course requires the web services to support `en_US` and `es_419`, and the we
 1. Keep every user-facing message in `messages.properties` (English) and `messages_es_419.properties` (Latin American Spanish).
 2. Resolve the language from the `Accept-Language` header.
 3. Use message keys, never literal text, in failures and in the `IllegalArgumentException` thrown by value objects.
-4. Answer every error with a `ProblemDetail` body: result assemblers for expected failures, and `GlobalExceptionHandler` for validation errors and invalid arguments.
-5. Answer with the key itself when a translation is missing.
+4. Answer every error with a `ProblemDetail` body: result assemblers for expected failures, and `GlobalExceptionHandler`, which extends `ResponseEntityExceptionHandler`, for validation errors, invalid arguments, the standard Spring MVC errors (malformed body, invalid identifier, unknown route, unsupported method) and unexpected errors, which answer 500 without internal details.
+5. Translate the Spring MVC errors with `problemDetail.<exception class>` keys.
+6. Answer with the key itself when a translation is missing.
 
 ### Consequences
 - **Positive**: one error schema in both languages; the domain stays free of display text.
