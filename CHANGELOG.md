@@ -15,5 +15,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - OpenAPI contract with the shared components, Identity and Access, the active vehicle assignment of the driver, and Pre-Operational Inspection with its item catalog grouped by vehicle system.
 
-[Unreleased]: https://github.com/1ASI0729-2620-16692-BitMeisters/Web-Services/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/1ASI0729-2620-16692-BitMeisters/Web-Services/releases/tag/v0.1.0
+[Unreleased]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/releases/tag/v0.1.0
