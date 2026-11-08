@@ -34,7 +34,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -80,6 +85,44 @@ class OperationalAuthorizationsControllerIntegrationTest {
         evaluationRuleCommandService.handle(new DefineEvaluationRuleCommand(brakes, new RuleName("Brakes"), ResultValue.FAIL, RuleImpact.BLOCKING, null));
         evaluationCommandService.handle(new EvaluateInspectionCommand(new InspectionId(UUID.randomUUID()), new VehicleId(blockedVehicle),
                 List.of(new InspectionResultSnapshot(new InspectionResultId(UUID.randomUUID()), brakes, ResultValue.FAIL)), null));
+    }
+
+    @Test
+    void listsOnlyTheLatestAuthorizationOfEachVehicle() throws Exception {
+        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Urgent delivery\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.vehicleId == '%s')]", blockedVehicle).value(hasSize(1)))
+                .andExpect(jsonPath("$[?(@.vehicleId == '%s')].status", blockedVehicle).value(contains("ENABLED")));
+    }
+
+    @Test
+    void filtersTheCurrentAuthorizationsByStatus() throws Exception {
+        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+                        .param("status", "NOT_ENABLED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].vehicleId").value(hasItem(blockedVehicle.toString())))
+                .andExpect(jsonPath("$[*].status").value(everyItem(is("NOT_ENABLED"))));
+
+        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+                        .param("status", "ENABLED"))
+                .andExpect(jsonPath("$[*].vehicleId").value(not(hasItem(blockedVehicle.toString()))));
+    }
+
+    @Test
+    void rejectsAnUnknownStatus() throws Exception {
+        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+                        .param("status", "BROKEN"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aDriverCannotListTheStatusOfEveryVehicle() throws Exception {
+        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", driverToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test

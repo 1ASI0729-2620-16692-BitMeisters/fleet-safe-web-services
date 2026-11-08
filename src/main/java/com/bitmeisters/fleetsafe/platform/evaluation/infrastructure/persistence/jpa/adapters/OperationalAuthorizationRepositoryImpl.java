@@ -45,6 +45,13 @@ public class OperationalAuthorizationRepositoryImpl implements OperationalAuthor
     }
 
     @Override
+    public List<OperationalAuthorization> findLatestOfEachVehicle() {
+        return operationalAuthorizationPersistenceRepository.findLatestOfEachVehicle().stream()
+                .map(OperationalAuthorizationPersistenceAssembler::toDomainFromPersistence)
+                .toList();
+    }
+
+    @Override
     public OperationalAuthorization save(OperationalAuthorization authorization) {
         var saved = operationalAuthorizationPersistenceRepository.save(
                 OperationalAuthorizationPersistenceAssembler.toPersistenceFromDomain(authorization));

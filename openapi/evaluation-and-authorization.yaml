@@ -186,6 +186,38 @@ paths:
                 status: 409
                 detail: The vehicle is not blocked, so there is no block to lift.
 
+  /operational-authorizations/current:
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getCurrentAuthorizations
+      summary: List the current operational status of every vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The latest authorization of each vehicle that has one,
+        newest first. A vehicle that was never evaluated does not appear. Filter by status to see, for
+        example, only the vehicles that are not enabled.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ENABLED, OBSERVED, NOT_ENABLED]
+      responses:
+        '200':
+          description: Current authorization of each vehicle, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '400':
+          description: The status is not one of the allowed values.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
   /operational-authorizations/overrides:
     get:
       tags: [Evaluation and Authorization]
