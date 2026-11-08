@@ -4,12 +4,13 @@ import com.bitmeisters.fleetsafe.platform.documentation.domain.model.aggregates.
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 public class ResponseEntityFromVehicleDocumentQueryResultAssembler {
 
-    public static ResponseEntity<?> toResponseEntityFromList(List<VehicleDocument> vehicleDocuments) {
+    public static ResponseEntity<?> toResponseEntityFromList(List<VehicleDocument> vehicleDocuments, UnaryOperator<String> readUrlOf) {
         var vehicleDocumentResources = vehicleDocuments.stream()
-                .map(VehicleDocumentResourceFromEntityAssembler::toResourceFromEntity)
+                .map(vehicleDocument -> VehicleDocumentResourceFromEntityAssembler.toResourceFromEntity(vehicleDocument, readUrlOf))
                 .toList();
         return ResponseEntity.ok(vehicleDocumentResources);
     }

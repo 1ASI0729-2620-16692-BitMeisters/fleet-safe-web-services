@@ -4,7 +4,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandFailure;
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandService;
+import com.bitmeisters.fleetsafe.platform.incident.application.internal.outboundservices.acl.ExternalIamService;
+import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AddIncidentFollowUpCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AttachCorrectiveActionEvidenceCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.CompleteRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.RegisterCorrectiveActionCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ScheduleRepairCommand;
@@ -21,6 +24,7 @@ import com.bitmeisters.fleetsafe.platform.shared.application.patterns.Result;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -29,8 +33,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -41,20 +48,22 @@ public class IncidentOperationsController {
     private final IncidentCommandService commandService;
     private final MessageSource messageSource;
 
-    private final CorrectiveActionAssembler correctiveActionAssembler =
-            new CorrectiveActionAssembler();
-
-    private final RepairAssembler repairAssembler =
-            new RepairAssembler();
-
-    private final IncidentFollowUpAssembler followUpAssembler =
-            new IncidentFollowUpAssembler();
+    private final FileStorageService fileStorageService;
+    private final CorrectiveActionAssembler correctiveActionAssembler;
+    private final RepairAssembler repairAssembler = new RepairAssembler();
+    private final IncidentFollowUpAssembler followUpAssembler;
 
     public IncidentOperationsController(
             IncidentCommandService commandService,
+            ExternalIamService externalIamService,
+            FileStorageService fileStorageService,
             MessageSource messageSource) {
         this.commandService = commandService;
+        this.fileStorageService = fileStorageService;
         this.messageSource = messageSource;
+        this.correctiveActionAssembler = new CorrectiveActionAssembler(
+                externalIamService::nameOf, fileStorageService::temporaryReadUrl);
+        this.followUpAssembler = new IncidentFollowUpAssembler(externalIamService::nameOf);
     }
 
     @Operation(summary = "Register a corrective action")
@@ -80,6 +89,34 @@ public class IncidentOperationsController {
                         result.success().orElseThrow());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(resource);
+    }
+
+    @Operation(summary = "Attach the evidence file of a corrective action")
+    @PostMapping(value = "/{incidentId}/corrective-actions/{correctiveActionId}/evidence",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
+    public ResponseEntity<?> attachCorrectiveActionEvidence(
+            @PathVariable UUID incidentId,
+            @PathVariable UUID correctiveActionId,
+            @RequestPart("file") MultipartFile file) throws IOException {
+
+        if (!FileStorageService.SUPPORTED_CONTENT_TYPES.contains(file.getContentType())) {
+            return problem(HttpStatus.BAD_REQUEST, "incident.corrective-action.error.evidence-type");
+        }
+
+        var evidenceUrl = fileStorageService.store(file.getContentType(), file.getBytes());
+        if (evidenceUrl.isEmpty()) {
+            return problem(HttpStatus.SERVICE_UNAVAILABLE, "incident.corrective-action.error.evidence-unavailable");
+        }
+
+        Result<CorrectiveAction, IncidentCommandFailure> result = commandService.handle(
+                new AttachCorrectiveActionEvidenceCommand(incidentId, correctiveActionId, evidenceUrl.get()));
+
+        if (result.isFailure()) {
+            return failureResponse(result.failure().orElseThrow());
+        }
+
+        return ResponseEntity.ok(correctiveActionAssembler.toResourceFromEntity(result.success().orElseThrow()));
     }
 
     @Operation(summary = "Register a repair")
@@ -157,6 +194,11 @@ public class IncidentOperationsController {
                         result.success().orElseThrow());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(resource);
+    }
+
+    private ResponseEntity<ProblemDetail> problem(HttpStatus status, String messageKey) {
+        String detail = messageSource.getMessage(messageKey, null, messageKey, LocaleContextHolder.getLocale());
+        return ResponseEntity.status(status).body(ProblemDetail.forStatusAndDetail(status, detail));
     }
 
     private ResponseEntity<ProblemDetail> invalidIdentifierResponse() {

@@ -17,9 +17,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentTypeResource'
+                $ref: '#/components/schemas/IncidentTypesResource'
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
@@ -109,9 +107,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
@@ -167,9 +163,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
 
   /incidents/vehicle/{vehicleId}:
     get:
@@ -191,9 +185,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
 
   /incidents/status/{status}:
     get:
@@ -214,9 +206,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
         '400':
           $ref: './common.yaml#/components/responses/BadRequest'
 
@@ -345,6 +335,55 @@ paths:
           $ref: './common.yaml#/components/responses/Forbidden'
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
+
+  /incidents/{id}/corrective-actions/{correctiveActionId}/evidence:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+      - name: correctiveActionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Incident Management]
+      operationId: attachCorrectiveActionEvidence
+      summary: Attach the evidence of a corrective action
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Stores a JPEG, PNG or PDF file in a private container;
+        the response links to it for one hour.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Evidence attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectiveActionResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '503':
+          description: The evidence could not be stored.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
 
   /incidents/{id}/repairs:
     parameters:
@@ -519,6 +558,7 @@ components:
         severity: {$ref: '#/components/schemas/IncidentSeverity'}
         status: {$ref: '#/components/schemas/IncidentStatus'}
         reportedBy: {type: string, format: uuid}
+        reportedByName: {type: [string, 'null'], examples: [Ana Quispe]}
         reportedAt: {type: string, format: date-time}
         resolutionType: {type: [string, 'null']}
         resolvedAt: {type: [string, 'null'], format: date-time}
@@ -550,6 +590,7 @@ components:
         incidentId: {type: string, format: uuid}
         description: {type: string}
         performedBy: {type: string, format: uuid}
+        performedByName: {type: [string, 'null'], examples: [Ana Quispe]}
         performedAt: {type: string, format: date-time}
         evidenceUrl: {type: [string, 'null']}
 
@@ -595,4 +636,17 @@ components:
         incidentId: {type: string, format: uuid}
         note: {type: string}
         createdBy: {type: string, format: uuid}
+        createdByName: {type: [string, 'null'], examples: [Ana Quispe]}
         createdAt: {type: string, format: date-time}
+    IncidentTypesResource:
+      type: object
+      properties:
+        incidentTypes:
+          type: array
+          items: {$ref: '#/components/schemas/IncidentTypeResource'}
+    IncidentsResource:
+      type: object
+      properties:
+        incidents:
+          type: array
+          items: {$ref: '#/components/schemas/IncidentResource'}

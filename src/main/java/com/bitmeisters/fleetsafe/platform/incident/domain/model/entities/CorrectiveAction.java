@@ -24,6 +24,10 @@ public class CorrectiveAction {
         this.evidenceUrl = command.evidenceUrl();
     }
 
+    public void attachEvidence(String evidenceUrl) {
+        this.evidenceUrl = evidenceUrl;
+    }
+
     public static CorrectiveAction restore(
             UUID id,
             UUID incidentId,

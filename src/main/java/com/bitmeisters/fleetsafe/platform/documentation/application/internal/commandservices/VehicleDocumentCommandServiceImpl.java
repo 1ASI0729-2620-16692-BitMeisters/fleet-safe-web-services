@@ -4,6 +4,7 @@ import com.bitmeisters.fleetsafe.platform.documentation.application.commandservi
 import com.bitmeisters.fleetsafe.platform.documentation.application.commandservices.VehicleDocumentCommandService;
 import com.bitmeisters.fleetsafe.platform.documentation.application.internal.outboundservices.calendar.DocumentationCalendar;
 import com.bitmeisters.fleetsafe.platform.documentation.domain.model.aggregates.VehicleDocument;
+import com.bitmeisters.fleetsafe.platform.documentation.domain.model.commands.AttachVehicleDocumentFileCommand;
 import com.bitmeisters.fleetsafe.platform.documentation.domain.model.commands.RecalculateDocumentStatusCommand;
 import com.bitmeisters.fleetsafe.platform.documentation.domain.model.commands.RegisterVehicleDocumentCommand;
 import com.bitmeisters.fleetsafe.platform.documentation.domain.model.commands.UpdateVehicleDocumentCommand;
@@ -59,6 +60,20 @@ public class VehicleDocumentCommandServiceImpl implements VehicleDocumentCommand
         vehicleDocument.get().update(command, documentationCalendar.today());
         var updatedVehicleDocument = vehicleDocumentRepository.save(vehicleDocument.get());
         log.info("Vehicle document updated: id={}, status={}", updatedVehicleDocument.getId(), updatedVehicleDocument.getStatus());
+        return Result.success(updatedVehicleDocument);
+    }
+
+    @Override
+    public Result<VehicleDocument, VehicleDocumentCommandFailure> handle(AttachVehicleDocumentFileCommand command) {
+        var vehicleDocument = vehicleDocumentRepository.findById(command.vehicleDocumentId())
+                .filter(document -> document.belongsTo(command.vehicleId()));
+        if (vehicleDocument.isEmpty()) {
+            log.warn("Vehicle document not found: id={}, vehicleId={}", command.vehicleDocumentId(), command.vehicleId().value());
+            return Result.failure(new VehicleDocumentCommandFailure.NotFound());
+        }
+        vehicleDocument.get().attachFile(command.fileUrl());
+        var updatedVehicleDocument = vehicleDocumentRepository.save(vehicleDocument.get());
+        log.info("Vehicle document file attached: id={}", updatedVehicleDocument.getId());
         return Result.success(updatedVehicleDocument);
     }
 

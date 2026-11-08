@@ -6,6 +6,7 @@ import com.bitmeisters.fleetsafe.platform.documentation.domain.model.queries.Get
 import com.bitmeisters.fleetsafe.platform.documentation.domain.model.queries.GetVehicleDocumentsQuery;
 import com.bitmeisters.fleetsafe.platform.documentation.interfaces.rest.resources.VehicleDocumentResource;
 import com.bitmeisters.fleetsafe.platform.documentation.interfaces.rest.transform.ResponseEntityFromVehicleDocumentQueryResultAssembler;
+import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DocumentsController {
 
     private final VehicleDocumentQueryService vehicleDocumentQueryService;
+    private final FileStorageService fileStorageService;
 
-    public DocumentsController(VehicleDocumentQueryService vehicleDocumentQueryService) {
+    public DocumentsController(VehicleDocumentQueryService vehicleDocumentQueryService, FileStorageService fileStorageService) {
         this.vehicleDocumentQueryService = vehicleDocumentQueryService;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
@@ -42,7 +45,7 @@ public class DocumentsController {
             @ApiResponse(responseCode = "403", description = "The role does not allow this operation")})
     public ResponseEntity<?> getVehicleDocuments() {
         return ResponseEntityFromVehicleDocumentQueryResultAssembler.toResponseEntityFromList(
-                vehicleDocumentQueryService.handle(new GetVehicleDocumentsQuery()));
+                vehicleDocumentQueryService.handle(new GetVehicleDocumentsQuery()), fileStorageService::temporaryReadUrl);
     }
 
     @GetMapping("/expiring")
@@ -57,6 +60,6 @@ public class DocumentsController {
             @ApiResponse(responseCode = "403", description = "The role does not allow this operation")})
     public ResponseEntity<?> getExpiringDocuments(@RequestParam(defaultValue = "" + VehicleDocument.ALERT_DAYS) int days) {
         return ResponseEntityFromVehicleDocumentQueryResultAssembler.toResponseEntityFromList(
-                vehicleDocumentQueryService.handle(new GetExpiringDocumentsQuery(days)));
+                vehicleDocumentQueryService.handle(new GetExpiringDocumentsQuery(days)), fileStorageService::temporaryReadUrl);
     }
 }

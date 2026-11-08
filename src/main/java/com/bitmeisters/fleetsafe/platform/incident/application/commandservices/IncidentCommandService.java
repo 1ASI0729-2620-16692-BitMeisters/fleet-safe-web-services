@@ -2,6 +2,7 @@ package com.bitmeisters.fleetsafe.platform.incident.application.commandservices;
 
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.aggregates.Incident;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AddIncidentFollowUpCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AttachCorrectiveActionEvidenceCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.CompleteRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.RegisterCorrectiveActionCommand;
@@ -26,6 +27,9 @@ public interface IncidentCommandService {
 
     Result<CorrectiveAction, IncidentCommandFailure> handle(
             RegisterCorrectiveActionCommand command);
+
+    Result<CorrectiveAction, IncidentCommandFailure> handle(
+            AttachCorrectiveActionEvidenceCommand command);
 
     Result<Repair, IncidentCommandFailure> handle(ScheduleRepairCommand command);
 

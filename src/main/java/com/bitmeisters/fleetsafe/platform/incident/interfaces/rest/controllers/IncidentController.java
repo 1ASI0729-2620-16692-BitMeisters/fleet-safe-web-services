@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandFailure;
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandService;
+import com.bitmeisters.fleetsafe.platform.incident.application.internal.outboundservices.acl.ExternalIamService;
+import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.bitmeisters.fleetsafe.platform.incident.application.queryservices.IncidentQueryService;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.aggregates.Incident;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
@@ -55,12 +57,14 @@ public class IncidentController {
     public IncidentController(
             IncidentCommandService commandService,
             IncidentQueryService queryService,
+            ExternalIamService externalIamService,
+            FileStorageService fileStorageService,
             MessageSource messageSource
     ) {
         this.commandService = commandService;
         this.queryService = queryService;
         this.messageSource = messageSource;
-        this.assembler = new IncidentAssembler();
+        this.assembler = new IncidentAssembler(externalIamService::nameOf, fileStorageService::temporaryReadUrl);
     }
 
     @Operation(summary = "List all incidents")

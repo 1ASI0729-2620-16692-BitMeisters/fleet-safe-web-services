@@ -163,6 +163,50 @@ paths:
         '422':
           $ref: '#/components/responses/UnknownDocumentType'
 
+  /vehicles/{vehicleId}/documents/{documentId}/file:
+    parameters:
+      - $ref: '#/components/parameters/VehicleId'
+      - $ref: '#/components/parameters/DocumentId'
+    post:
+      tags: [Vehicle Documentation]
+      operationId: attachVehicleDocumentFile
+      summary: Attach the scanned file of a document
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Stores a JPEG, PNG or PDF file in a private container and
+        replaces the previous one. Editing the document later keeps the file.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleDocumentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '503':
+          description: The file could not be stored.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+
   /documents:
     get:
       tags: [Vehicle Documentation]
@@ -330,7 +374,7 @@ components:
           type: [string, 'null']
           maxLength: 500
           pattern: '^https?://\S+$'
-          description: Optional link to the scanned document.
+          description: Optional link to the scanned document. Leave it empty to keep the attached file.
           examples: ['https://storage.example.com/documents/soat-2026-004512.pdf']
 
     VehicleDocumentResource:
@@ -364,6 +408,7 @@ components:
           $ref: '#/components/schemas/DocumentStatus'
         fileUrl:
           type: [string, 'null']
+          description: Link to read the attached file, valid for one hour.
           examples: ['https://storage.example.com/documents/soat-2026-004512.pdf']
         createdAt:
           type: string

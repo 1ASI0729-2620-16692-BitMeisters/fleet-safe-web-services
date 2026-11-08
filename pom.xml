@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.bitmeisters.fleetsafe</groupId>
     <artifactId>platform</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <name>fleetsafe-platform</name>
     <description>FleetSafe RESTful API for the preventive safety control of cargo fleets</description>
     <url>https://github.com/1ASI0729-2620-16692-BitMeisters/Web-Services</url>
