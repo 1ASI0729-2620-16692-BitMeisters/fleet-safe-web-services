@@ -1,7 +1,9 @@
 package com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest;
 
 import com.bitmeisters.fleetsafe.platform.evaluation.application.queryservices.OperationalAuthorizationQueryService;
+import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.queries.GetCurrentAuthorizationsQuery;
 import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.queries.GetOverridesByPeriodQuery;
+import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.valueobjects.AuthorizationStatus;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.resources.OperationalAuthorizationResource;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.transform.ResponseEntityFromOperationalAuthorizationQueryResultAssembler;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(value = "/api/v1/operational-authorizations", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -30,6 +33,18 @@ public class OperationalAuthorizationsController {
 
     public OperationalAuthorizationsController(OperationalAuthorizationQueryService operationalAuthorizationQueryService) {
         this.operationalAuthorizationQueryService = operationalAuthorizationQueryService;
+    }
+
+    @GetMapping("/current")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
+    @Operation(summary = "List the current operational status of every vehicle", description = "Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Vehicles that were never evaluated do not appear.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Current authorization of each vehicle, most recent first",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = OperationalAuthorizationResource.class)))),
+            @ApiResponse(responseCode = "400", description = "Invalid status")})
+    public ResponseEntity<?> getCurrentAuthorizations(@RequestParam(required = false) AuthorizationStatus status) {
+        return ResponseEntityFromOperationalAuthorizationQueryResultAssembler.toResponseEntityFromList(
+                operationalAuthorizationQueryService.handle(new GetCurrentAuthorizationsQuery(Optional.ofNullable(status))));
     }
 
     @GetMapping("/overrides")

@@ -15,5 +15,7 @@ public interface OperationalAuthorizationRepository {
 
     List<OperationalAuthorization> findAllByOverrideTrueAndAuthorizedAtBetweenOrderByAuthorizedAtDesc(Instant from, Instant to);
 
+    List<OperationalAuthorization> findLatestOfEachVehicle();
+
     OperationalAuthorization save(OperationalAuthorization authorization);
 }
