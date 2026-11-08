@@ -16,6 +16,7 @@ Each record states one decision taken for the FleetSafe RESTful API, why it was 
 - [ADR-010: Development and Production Profiles](#adr-010-development-and-production-profiles)
 - [ADR-011: Contract-First OpenAPI Documentation](#adr-011-contract-first-openapi-documentation)
 - [ADR-012: Container Delivery to Azure Container Apps](#adr-012-container-delivery-to-azure-container-apps)
+- [ADR-013: Transactional Email through Resend](#adr-013-transactional-email-through-resend)
 
 ---
 
@@ -255,3 +256,25 @@ The API is deployed for each delivery of the course, and the deployed version mu
 ### Consequences
 - **Positive**: every deployment is a tested image of a known commit.
 - **Negative**: a new version reaches Azure only when the image tag is updated there.
+
+---
+
+## ADR-013: Transactional Email through Resend
+
+### Status
+Accepted
+
+### Context
+The course requires the platform to consume a third-party service besides its own API. FleetSafe needs to tell people about events that happen while they are away, starting with the opening of their account. It is a university project: the emails only have to reach the team, not real customers.
+
+### Decision
+1. Send emails through the REST API of [Resend](https://resend.com) with Spring's `RestClient`, without a vendor SDK.
+2. Keep the port in the application layer of the context that sends the email (`iam.application.internal.outboundservices.email.EmailService`) and the adapter in `iam.infrastructure.email.resend`, as with hashing and tokens.
+3. Trigger the email from a domain event: `User` registers `UserRegisteredEvent` and `UserRegisteredEventHandler` sends it after the transaction commits.
+4. Translate the subject and the body with the same message bundles as the rest of the API.
+5. Never fail the operation because of the email: errors are logged, and without `RESEND_API_KEY` nothing is sent.
+6. Without a verified domain, Resend only delivers to the owner of the account, so `RESEND_RECIPIENT_OVERRIDE` redirects every email to that address.
+
+### Consequences
+- **Positive**: the third-party integration is isolated behind a port, can be tested without network and does not affect the use case it follows.
+- **Negative**: an email that fails is lost; there is no retry or outbox.
