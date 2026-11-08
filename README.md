@@ -67,6 +67,18 @@ The API documentation is served at `/swagger-ui/index.html` and `/v3/api-docs`.
 `DATABASE_URL` defaults to `jdbc:postgresql://localhost:5432/fleetsafe`. The API documentation is
 served at `http://localhost:8080/swagger-ui.html`.
 
+## Demo data
+
+`db/demo-data.sql` loads the demo company, its fleet and vehicles, the document types, the 42 inspection
+items and six evaluation rules. Run it once against a database whose tables the application already
+created, with the company of the first administrator (`ADMIN_COMPANY_ID`):
+
+```bash
+psql "<connection string>" -v company_id=<ADMIN_COMPANY_ID> -f db/demo-data.sql
+```
+
+Every insert ignores rows that already exist, so running it again changes nothing.
+
 ## Authentication
 
 Every endpoint except `POST /api/v1/tokens` and the documentation requires a JWT:
