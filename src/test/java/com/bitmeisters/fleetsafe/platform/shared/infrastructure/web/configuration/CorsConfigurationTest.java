@@ -2,6 +2,7 @@ package com.bitmeisters.fleetsafe.platform.shared.infrastructure.web.configurati
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -34,6 +35,9 @@ class CorsConfigurationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Value("${documentation.application.version}")
+    private String projectVersion;
+
     @Test
     void allowsTheDeployedWebApplication() throws Exception {
         mockMvc.perform(options("/api/v1/ping")
@@ -63,7 +67,7 @@ class CorsConfigurationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.info.title").value("FleetSafe Platform API"))
-                .andExpect(jsonPath("$.info.version").value("0.0.1"))
+                .andExpect(jsonPath("$.info.version").value(projectVersion))
                 .andExpect(jsonPath("$.info.description").value("FleetSafe RESTful API for the preventive safety control of cargo fleets"));
     }
 }
