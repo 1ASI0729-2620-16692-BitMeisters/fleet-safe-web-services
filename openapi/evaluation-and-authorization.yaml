@@ -1,0 +1,514 @@
+openapi: 3.1.0
+info:
+  title: FleetSafe API - Evaluation and Authorization
+  version: 0.1.0
+paths:
+  /inspections/{id}/evaluate:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    post:
+      tags: [Evaluation and Authorization]
+      operationId: evaluateInspection
+      summary: Evaluate a completed inspection
+      description: >-
+        Roles: FLEET_SUPERVISOR, or the system when an inspection is completed. Applies the active
+        evaluation rules to the results of the inspection and issues the operational authorization of
+        the vehicle. A single BLOCKING impact leaves the vehicle NOT_ENABLED; without matching rules
+        the vehicle is ENABLED. An inspection can only be evaluated once.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Operational authorization produced by the evaluation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: The inspection has already been evaluated.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: This inspection has already been evaluated.
+        '422':
+          description: The inspection has no results to evaluate.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Unprocessable Content
+                status: 422
+                detail: The inspection has no results to evaluate.
+
+  /vehicles/{id}/status:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getCurrentAuthorization
+      summary: Get the current operational status of a vehicle
+      description: >-
+        Roles: any authenticated user of the company. Returns the latest operational authorization,
+        which is the source of truth of the vehicle status.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Current operational authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          description: The vehicle has no operational authorization yet.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: The vehicle has no operational authorization yet.
+
+  /vehicles/{id}/authorizations:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getAuthorizationHistoryByVehicle
+      summary: List the authorization history of a vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Every authorization of the vehicle, newest first,
+        including the ones that lifted a block.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Authorizations of the vehicle, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+
+  /vehicles/{id}/block-lifts:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    post:
+      tags: [Evaluation and Authorization]
+      operationId: liftBlock
+      summary: Lift the block of a vehicle that is not enabled
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Issues a new authorization marked as an override that
+        enables the vehicle, keeping the reason and the user who authorized it. The user comes from
+        the access token, so it is not sent in the body. Only a NOT_ENABLED vehicle can be unblocked.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiftBlockResource'
+      responses:
+        '201':
+          description: Block lifted; the vehicle is ENABLED by override.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalAuthorizationResource'
+              example:
+                id: 5d4c3b2a-1f0e-4d9c-8b7a-6f5e4d3c2b1a
+                evaluationId: 2b4d6f8a-1c3e-4a5b-9c7d-6e5f4a3b2c1d
+                vehicleId: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+                status: ENABLED
+                isOverride: true
+                overrideReason: Urgent delivery approved by operations; brakes will be repaired on return.
+                authorizedBy: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+                authorizedAt: '2026-10-26T15:10:00Z'
+                validUntil: null
+        '400':
+          description: The reason is missing or too long.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: A reason is required to authorize the departure.
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          description: The vehicle has no operational authorization yet.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: The vehicle has no operational authorization yet.
+        '409':
+          description: The vehicle is not blocked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: The vehicle is not blocked, so there is no block to lift.
+
+  /operational-authorizations/current:
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getCurrentAuthorizations
+      summary: List the current operational status of every vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The latest authorization of each vehicle that has one,
+        newest first. A vehicle that was never evaluated does not appear. Filter by status to see, for
+        example, only the vehicles that are not enabled.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ENABLED, OBSERVED, NOT_ENABLED]
+      responses:
+        '200':
+          description: Current authorization of each vehicle, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '400':
+          description: The status is not one of the allowed values.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+  /operational-authorizations/overrides:
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getOverridesByPeriod
+      summary: List the lifted blocks of a period
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Exceptions report: every authorization that lifted a
+        block between from and to, newest first.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Overrides of the period, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '400':
+          description: The period is missing or its start is after its end.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: The start of the period must be before its end.
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+
+  /evaluation-rules:
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getActiveEvaluationRules
+      summary: List the active evaluation rules
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Rules applied to new evaluations.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Active evaluation rules.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EvaluationRuleResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+    post:
+      tags: [Evaluation and Authorization]
+      operationId: defineEvaluationRule
+      summary: Define an evaluation rule
+      description: >-
+        Roles: ADMINISTRATOR. Only one active rule can exist for the same inspection item and
+        result.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefineEvaluationRuleResource'
+      responses:
+        '201':
+          description: Rule defined and active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRuleResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '409':
+          description: An active rule already exists for the item and result.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: An active rule already exists for this inspection item and result.
+
+  /evaluation-rules/{id}:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getEvaluationRuleById
+      summary: Get an evaluation rule
+      description: 'Roles: FLEET_SUPERVISOR, ADMINISTRATOR.'
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: The evaluation rule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRuleResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          description: The evaluation rule was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: The evaluation rule was not found.
+
+  /evaluation-rules/{id}/deactivation:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    post:
+      tags: [Evaluation and Authorization]
+      operationId: deactivateEvaluationRule
+      summary: Deactivate an evaluation rule
+      description: >-
+        Roles: ADMINISTRATOR. The rule stops applying to new evaluations; past evaluations keep it.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Rule deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRuleResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          description: The evaluation rule was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: The evaluation rule was not found.
+        '409':
+          description: The rule is already inactive.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: The evaluation rule is already inactive.
+
+components:
+  schemas:
+    ResultValue:
+      type: string
+      enum: [OK, OBSERVED, FAIL]
+    RuleImpact:
+      type: string
+      enum: [NONE, OBSERVED, BLOCKING]
+
+    OperationalAuthorizationResource:
+      type: object
+      required: [id, evaluationId, vehicleId, status, isOverride, authorizedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples: [7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f]
+        evaluationId:
+          type: string
+          format: uuid
+          examples: [2b4d6f8a-1c3e-4a5b-9c7d-6e5f4a3b2c1d]
+        vehicleId:
+          type: string
+          format: uuid
+          examples: [9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d]
+        status:
+          $ref: './common.yaml#/components/schemas/VehicleStatus'
+        isOverride:
+          type: boolean
+          description: True when the authorization lifts a block.
+          examples: [false]
+        overrideReason:
+          type: [string, 'null']
+          description: Reason for lifting the block; only present when isOverride is true.
+          examples: [null]
+        authorizedBy:
+          type: [string, 'null']
+          format: uuid
+          description: User who authorized; empty when the evaluation was automatic.
+          examples: [null]
+        authorizedAt:
+          type: string
+          format: date-time
+          examples: ['2026-10-26T14:30:00Z']
+        validUntil:
+          type: [string, 'null']
+          format: date-time
+          description: End of validity; empty when the authorization does not expire.
+          examples: [null]
+
+    LiftBlockResource:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Why the vehicle is authorized to operate despite the block.
+          examples: [Urgent delivery approved by operations; brakes will be repaired on return.]
+
+    EvaluationRuleResource:
+      type: object
+      required: [id, inspectionItemId, name, foundResult, resultingImpact, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples: [3f2b9c6e-1a4d-4e8b-9c2a-7d5e6f8a9b01]
+        inspectionItemId:
+          type: string
+          format: uuid
+          examples: [496e45e1-43d4-59dc-ae40-0b5e4300743b]
+        name:
+          type: string
+          examples: [Brake system failure blocks the vehicle]
+        foundResult:
+          $ref: '#/components/schemas/ResultValue'
+        resultingImpact:
+          $ref: '#/components/schemas/RuleImpact'
+        description:
+          type: [string, 'null']
+          examples: [A failed brake system makes the vehicle unsafe to operate.]
+        isActive:
+          type: boolean
+          examples: [true]
+
+    DefineEvaluationRuleResource:
+      type: object
+      required: [inspectionItemId, name, foundResult, resultingImpact]
+      properties:
+        inspectionItemId:
+          type: string
+          format: uuid
+          examples: [496e45e1-43d4-59dc-ae40-0b5e4300743b]
+        name:
+          type: string
+          maxLength: 120
+          examples: [Brake system failure blocks the vehicle]
+        foundResult:
+          $ref: '#/components/schemas/ResultValue'
+        resultingImpact:
+          $ref: '#/components/schemas/RuleImpact'
+        description:
+          type: string
+          maxLength: 500
+          examples: [A failed brake system makes the vehicle unsafe to operate.]

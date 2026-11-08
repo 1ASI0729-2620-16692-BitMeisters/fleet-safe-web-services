@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: FleetSafe API
-  version: 0.1.0
+  version: 0.2.0
   license:
     name: MIT
     identifier: MIT
@@ -19,9 +19,15 @@ tags:
     description: Vehicles, drivers and the assignment of vehicles to drivers.
   - name: Pre-Operational Inspection
     description: Inspection item catalog and the inspections drivers perform before operating a vehicle.
+  - name: Evaluation and Authorization
+    description: Evaluation rules, evaluation of inspections and the operational authorization of each vehicle.
+  - name: Vehicle Documentation
+    description: Document types and the documents of each vehicle, with their validity.
+  - name: Incident Management
+    description: Incidents of the vehicles, their corrective actions, repairs and follow-ups.
 paths:
-  /auth/login:
-    $ref: './identity-and-access.yaml#/paths/~1auth~1login'
+  /tokens:
+    $ref: './identity-and-access.yaml#/paths/~1tokens'
   /users:
     $ref: './identity-and-access.yaml#/paths/~1users'
   /users/{id}:
@@ -42,6 +48,59 @@ paths:
     $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results~1{resultId}~1observations'
   /inspections/{id}/results/{resultId}/observations/{observationId}/evidences:
     $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results~1{resultId}~1observations~1{observationId}~1evidences'
+  /inspections/{id}/evaluate:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1inspections~1{id}~1evaluate'
+  /vehicles/{id}/status:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1vehicles~1{id}~1status'
+  /vehicles/{id}/authorizations:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1vehicles~1{id}~1authorizations'
+  /vehicles/{id}/block-lifts:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1vehicles~1{id}~1block-lifts'
+  /operational-authorizations/current:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1operational-authorizations~1current'
+  /operational-authorizations/overrides:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1operational-authorizations~1overrides'
+  /evaluation-rules:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1evaluation-rules'
+  /evaluation-rules/{id}:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1evaluation-rules~1{id}'
+  /evaluation-rules/{id}/deactivation:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1evaluation-rules~1{id}~1deactivation'
+  /document-types:
+    $ref: './vehicle-documentation.yaml#/paths/~1document-types'
+  /vehicles/{vehicleId}/documents:
+    $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents'
+  /vehicles/{vehicleId}/documents/{documentId}:
+    $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}'
+  /documents:
+    $ref: './vehicle-documentation.yaml#/paths/~1documents'
+  /documents/expiring:
+    $ref: './vehicle-documentation.yaml#/paths/~1documents~1expiring'
+  /incident-types:
+    $ref: './incident-management.yaml#/paths/~1incident-types'
+  /incident-types/{id}:
+    $ref: './incident-management.yaml#/paths/~1incident-types~1{id}'
+  /incidents:
+    $ref: './incident-management.yaml#/paths/~1incidents'
+  /incidents/search:
+    $ref: './incident-management.yaml#/paths/~1incidents~1search'
+  /incidents/vehicle/{vehicleId}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1vehicle~1{vehicleId}'
+  /incidents/status/{status}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1status~1{status}'
+  /incidents/{id}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}'
+  /incidents/{id}/resolve:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1resolve'
+  /incidents/{id}/corrective-actions:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions'
+  /incidents/{id}/repairs:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs'
+  /incidents/{id}/repairs/{repairId}/complete:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs~1{repairId}~1complete'
+  /incidents/{id}/follow-ups:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1follow-ups'
+
 components:
   securitySchemes:
     bearerAuth:

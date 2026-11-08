@@ -1,0 +1,375 @@
+openapi: 3.1.0
+info:
+  title: FleetSafe API - Vehicle Documentation
+  version: 0.1.0
+paths:
+  /document-types:
+    get:
+      tags: [Vehicle Documentation]
+      operationId: getDocumentTypes
+      summary: List the document types
+      description: >-
+        Roles: any authenticated user of the company.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Document types of the catalog.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentTypeResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+    post:
+      tags: [Vehicle Documentation]
+      operationId: registerDocumentType
+      summary: Register a document type
+      description: >-
+        Roles: ADMINISTRATOR. The code is stored in upper case and must be unique. A required type is
+        one the vehicle needs to operate.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDocumentTypeResource'
+      responses:
+        '201':
+          description: Document type registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '409':
+          description: A document type with this code already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                detail: A document type with this code already exists.
+
+  /vehicles/{vehicleId}/documents:
+    parameters:
+      - $ref: '#/components/parameters/VehicleId'
+    get:
+      tags: [Vehicle Documentation]
+      operationId: getDocumentsByVehicle
+      summary: List the documents of a vehicle
+      description: >-
+        Roles: any authenticated user of the company. Ordered by expiration date, with the status of
+        today.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Documents of the vehicle.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleDocumentResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+    post:
+      tags: [Vehicle Documentation]
+      operationId: registerVehicleDocument
+      summary: Register a document of a vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The status is derived from the expiration date: EXPIRED
+        after it, EXPIRING within the next 30 days and VALID otherwise.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveVehicleDocumentResource'
+      responses:
+        '201':
+          description: Document registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleDocumentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnknownDocumentType'
+
+  /vehicles/{vehicleId}/documents/{documentId}:
+    parameters:
+      - $ref: '#/components/parameters/VehicleId'
+      - $ref: '#/components/parameters/DocumentId'
+    put:
+      tags: [Vehicle Documentation]
+      operationId: updateVehicleDocument
+      summary: Update a document of a vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Replaces the data of the document, for example when it
+        is renewed, and recalculates its status.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveVehicleDocumentResource'
+      responses:
+        '200':
+          description: Document updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleDocumentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          description: The vehicle has no document with this identifier.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Not Found
+                status: 404
+                detail: The vehicle has no document with this identifier.
+        '422':
+          $ref: '#/components/responses/UnknownDocumentType'
+
+  /documents:
+    get:
+      tags: [Vehicle Documentation]
+      operationId: getVehicleDocuments
+      summary: List the documents of every vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Ordered by expiration date, with the status of today.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Documents of every vehicle.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleDocumentResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+
+  /documents/expiring:
+    get:
+      tags: [Vehicle Documentation]
+      operationId: getExpiringDocuments
+      summary: List the documents about to expire
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Documents that expire between today and the given
+        number of days, ordered by expiration date. Already expired documents are not included.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: days
+          in: query
+          required: false
+          description: Size of the window, in days.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Documents about to expire.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleDocumentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+
+components:
+  parameters:
+    VehicleId:
+      name: vehicleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    UnknownDocumentType:
+      description: The document type does not exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: './common.yaml#/components/schemas/Problem'
+          example:
+            type: about:blank
+            title: Unprocessable Content
+            status: 422
+            detail: The document type does not exist.
+
+  schemas:
+    DocumentStatus:
+      type: string
+      enum: [VALID, EXPIRING, EXPIRED]
+
+    DocumentTypeResource:
+      type: object
+      required: [id, code, name, isRequired, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples: [7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f]
+        code:
+          type: string
+          examples: [SOAT]
+        name:
+          type: string
+          examples: [Mandatory traffic accident insurance]
+        description:
+          type: [string, 'null']
+          examples: [Insurance that every vehicle must carry to circulate in Peru.]
+        isRequired:
+          type: boolean
+          description: Whether the vehicle needs this document to operate.
+          examples: [true]
+        isActive:
+          type: boolean
+          examples: [true]
+
+    RegisterDocumentTypeResource:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 30
+          examples: [SOAT]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          examples: [Mandatory traffic accident insurance]
+        description:
+          type: [string, 'null']
+          maxLength: 500
+          examples: [Insurance that every vehicle must carry to circulate in Peru.]
+        isRequired:
+          type: boolean
+          default: false
+          examples: [true]
+
+    SaveVehicleDocumentResource:
+      type: object
+      required: [documentTypeId, number, issueDate, expirationDate]
+      properties:
+        documentTypeId:
+          type: string
+          format: uuid
+          examples: [7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f]
+        number:
+          type: string
+          minLength: 1
+          maxLength: 60
+          examples: [SOAT-2026-004512]
+        issueDate:
+          type: string
+          format: date
+          examples: ['2026-01-15']
+        expirationDate:
+          type: string
+          format: date
+          description: Cannot be before the issue date.
+          examples: ['2027-01-14']
+        fileUrl:
+          type: [string, 'null']
+          maxLength: 500
+          pattern: '^https?://\S+$'
+          description: Optional link to the scanned document.
+          examples: ['https://storage.example.com/documents/soat-2026-004512.pdf']
+
+    VehicleDocumentResource:
+      type: object
+      required: [id, vehicleId, documentTypeId, number, issueDate, expirationDate, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples: [2b4d6f8a-1c3e-4a5b-9d7f-0e2c4a6b8d1f]
+        vehicleId:
+          type: string
+          format: uuid
+          examples: [9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d]
+        documentTypeId:
+          type: string
+          format: uuid
+          examples: [7c1e2d3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f]
+        number:
+          type: string
+          examples: [SOAT-2026-004512]
+        issueDate:
+          type: string
+          format: date
+          examples: ['2026-01-15']
+        expirationDate:
+          type: string
+          format: date
+          examples: ['2027-01-14']
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        fileUrl:
+          type: [string, 'null']
+          examples: ['https://storage.example.com/documents/soat-2026-004512.pdf']
+        createdAt:
+          type: string
+          format: date-time
+          examples: ['2026-10-28T14:00:00Z']
+        updatedAt:
+          type: string
+          format: date-time
+          examples: ['2026-10-28T14:00:00Z']
