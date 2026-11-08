@@ -21,6 +21,7 @@ import com.bitmeisters.fleetsafe.platform.shared.application.patterns.Result;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -58,6 +59,7 @@ public class IncidentOperationsController {
 
     @Operation(summary = "Register a corrective action")
     @PostMapping("/{incidentId}/corrective-actions")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> registerCorrectiveAction(
             @PathVariable UUID incidentId,
             @RequestBody RegisterCorrectiveActionCommand command) {
@@ -82,6 +84,7 @@ public class IncidentOperationsController {
 
     @Operation(summary = "Register a repair")
     @PostMapping("/{incidentId}/repairs")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> scheduleRepair(
             @PathVariable UUID incidentId,
             @RequestBody ScheduleRepairCommand command) {
@@ -106,6 +109,7 @@ public class IncidentOperationsController {
 
     @Operation(summary = "Mark a repair as completed")
     @PatchMapping("/{incidentId}/repairs/{repairId}/complete")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> completeRepair(
             @PathVariable UUID incidentId,
             @PathVariable UUID repairId,
@@ -132,6 +136,7 @@ public class IncidentOperationsController {
 
     @Operation(summary = "Register an incident follow-up")
     @PostMapping("/{incidentId}/follow-ups")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> addFollowUp(
             @PathVariable UUID incidentId,
             @RequestBody AddIncidentFollowUpCommand command) {

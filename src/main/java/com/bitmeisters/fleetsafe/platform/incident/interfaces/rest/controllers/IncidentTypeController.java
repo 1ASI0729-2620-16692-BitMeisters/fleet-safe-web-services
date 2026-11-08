@@ -15,6 +15,7 @@ import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.Inc
 import com.bitmeisters.fleetsafe.platform.shared.application.patterns.Result;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,6 +87,7 @@ public class IncidentTypeController {
 
     @Operation(summary = "Register an incident type")
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<?> register(
             @RequestBody RegisterIncidentTypeCommand command,
             Locale locale
@@ -109,6 +111,7 @@ public class IncidentTypeController {
 
     @Operation(summary = "Update an incident type")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<?> update(
             @PathVariable UUID id,
             @RequestBody UpdateIncidentTypeCommand command,

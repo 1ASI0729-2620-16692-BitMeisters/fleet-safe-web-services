@@ -23,6 +23,7 @@ import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.Inc
 import com.bitmeisters.fleetsafe.platform.shared.application.patterns.Result;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -130,6 +131,7 @@ public class IncidentController {
 
     @Operation(summary = "Report an incident")
     @PostMapping
+    @PreAuthorize("hasAnyRole('DRIVER', 'FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> report(
             @RequestBody ReportIncidentCommand command,
             Locale locale
@@ -153,6 +155,7 @@ public class IncidentController {
 
     @Operation(summary = "Update an incident")
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> update(
             @PathVariable UUID id,
             @RequestBody UpdateIncidentCommand command,
@@ -179,6 +182,7 @@ public class IncidentController {
 
     @Operation(summary = "Resolve an incident")
     @PatchMapping("/{id}/resolve")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> resolve(
             @PathVariable UUID id,
             @RequestBody ResolveIncidentCommand command,
@@ -205,6 +209,7 @@ public class IncidentController {
 
     @Operation(summary = "Delete an incident")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> delete(
             @PathVariable UUID id,
             Locale locale
