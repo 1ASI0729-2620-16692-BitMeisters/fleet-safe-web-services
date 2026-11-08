@@ -8,6 +8,7 @@ public record IncidentFollowUpResource(
         UUID incidentId,
         String note,
         UUID createdBy,
+        String createdByName,
         Instant createdAt
 ) {
 }

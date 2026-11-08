@@ -72,6 +72,8 @@ paths:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents'
   /vehicles/{vehicleId}/documents/{documentId}:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}'
+  /vehicles/{vehicleId}/documents/{documentId}/file:
+    $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}~1file'
   /documents:
     $ref: './vehicle-documentation.yaml#/paths/~1documents'
   /documents/expiring:
@@ -94,6 +96,8 @@ paths:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1resolve'
   /incidents/{id}/corrective-actions:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions'
+  /incidents/{id}/corrective-actions/{correctiveActionId}/evidence:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions~1{correctiveActionId}~1evidence'
   /incidents/{id}/repairs:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs'
   /incidents/{id}/repairs/{repairId}/complete:

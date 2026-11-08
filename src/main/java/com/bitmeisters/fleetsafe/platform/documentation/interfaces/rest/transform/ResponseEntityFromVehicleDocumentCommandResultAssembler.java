@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 
+import java.util.function.UnaryOperator;
+
 public class ResponseEntityFromVehicleDocumentCommandResultAssembler {
 
     private static HttpStatus statusFromFailure(VehicleDocumentCommandFailure failure) {
@@ -25,10 +27,11 @@ public class ResponseEntityFromVehicleDocumentCommandResultAssembler {
     public static ResponseEntity<?> toResponseEntityFromResult(
             Result<VehicleDocument, VehicleDocumentCommandFailure> result,
             MessageSource messageSource,
-            HttpStatus successStatus) {
+            HttpStatus successStatus,
+            UnaryOperator<String> readUrlOf) {
         return result.fold(
                 vehicleDocument -> new ResponseEntity<>(
-                        VehicleDocumentResourceFromEntityAssembler.toResourceFromEntity(vehicleDocument),
+                        VehicleDocumentResourceFromEntityAssembler.toResourceFromEntity(vehicleDocument, readUrlOf),
                         successStatus),
                 failure -> {
                     var status = statusFromFailure(failure);
