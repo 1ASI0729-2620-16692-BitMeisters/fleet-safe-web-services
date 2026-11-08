@@ -5,7 +5,7 @@ import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.valueobjects.V
 import com.bitmeisters.fleetsafe.platform.evaluation.domain.repositories.OperationalAuthorizationRepository;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.assemblers.OperationalAuthorizationPersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.repositories.OperationalAuthorizationPersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -16,12 +16,12 @@ import java.util.Optional;
 public class OperationalAuthorizationRepositoryImpl implements OperationalAuthorizationRepository {
 
     private final OperationalAuthorizationPersistenceRepository operationalAuthorizationPersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     public OperationalAuthorizationRepositoryImpl(OperationalAuthorizationPersistenceRepository operationalAuthorizationPersistenceRepository,
-                                                  ApplicationEventPublisher eventPublisher) {
+                                                  DomainEventPublisher domainEventPublisher) {
         this.operationalAuthorizationPersistenceRepository = operationalAuthorizationPersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -46,11 +46,9 @@ public class OperationalAuthorizationRepositoryImpl implements OperationalAuthor
 
     @Override
     public OperationalAuthorization save(OperationalAuthorization authorization) {
-        var events = List.copyOf(authorization.domainEvents());
         var saved = operationalAuthorizationPersistenceRepository.save(
                 OperationalAuthorizationPersistenceAssembler.toPersistenceFromDomain(authorization));
-        events.forEach(eventPublisher::publishEvent);
-        authorization.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(authorization);
         return OperationalAuthorizationPersistenceAssembler.toDomainFromPersistence(saved);
     }
 }

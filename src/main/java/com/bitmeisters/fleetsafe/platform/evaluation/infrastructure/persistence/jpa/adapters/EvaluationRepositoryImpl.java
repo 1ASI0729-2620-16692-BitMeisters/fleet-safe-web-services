@@ -5,22 +5,21 @@ import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.valueobjects.I
 import com.bitmeisters.fleetsafe.platform.evaluation.domain.repositories.EvaluationRepository;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.assemblers.EvaluationPersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.repositories.EvaluationPersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
 public class EvaluationRepositoryImpl implements EvaluationRepository {
 
     private final EvaluationPersistenceRepository evaluationPersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     public EvaluationRepositoryImpl(EvaluationPersistenceRepository evaluationPersistenceRepository,
-                                    ApplicationEventPublisher eventPublisher) {
+                                    DomainEventPublisher domainEventPublisher) {
         this.evaluationPersistenceRepository = evaluationPersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -36,10 +35,8 @@ public class EvaluationRepositoryImpl implements EvaluationRepository {
 
     @Override
     public Evaluation save(Evaluation evaluation) {
-        var events = List.copyOf(evaluation.domainEvents());
         var saved = evaluationPersistenceRepository.save(EvaluationPersistenceAssembler.toPersistenceFromDomain(evaluation));
-        events.forEach(eventPublisher::publishEvent);
-        evaluation.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(evaluation);
         return EvaluationPersistenceAssembler.toDomainFromPersistence(saved);
     }
 }
