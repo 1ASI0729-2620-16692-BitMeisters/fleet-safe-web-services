@@ -36,12 +36,8 @@ public class VehicleDocument extends AbstractDomainAggregateRoot<VehicleDocument
         this.documentTypeId = command.documentTypeId();
         this.number = command.number();
         this.validityPeriod = command.validityPeriod();
-        if (command.fileUrl() != null) this.fileUrl = command.fileUrl();
+        this.fileUrl = command.fileUrl();
         recalculateStatus(today);
-    }
-
-    public void attachFile(FileUrl fileUrl) {
-        this.fileUrl = fileUrl;
     }
 
     public static VehicleDocument restore(UUID id, VehicleId vehicleId, DocumentTypeId documentTypeId, DocumentNumber number,
@@ -61,8 +57,12 @@ public class VehicleDocument extends AbstractDomainAggregateRoot<VehicleDocument
         this.documentTypeId = command.documentTypeId();
         this.number = command.number();
         this.validityPeriod = command.validityPeriod();
-        this.fileUrl = command.fileUrl();
+        if (command.fileUrl() != null) this.fileUrl = command.fileUrl();
         recalculateStatus(today);
+    }
+
+    public void attachFile(FileUrl fileUrl) {
+        this.fileUrl = fileUrl;
     }
 
     public long daysUntilExpiration(LocalDate today) {
