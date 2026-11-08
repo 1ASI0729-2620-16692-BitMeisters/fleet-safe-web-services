@@ -6,7 +6,7 @@ import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAdd
 import com.bitmeisters.fleetsafe.platform.iam.domain.repositories.UserRepository;
 import com.bitmeisters.fleetsafe.platform.iam.infrastructure.persistence.jpa.assemblers.UserPersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.iam.infrastructure.persistence.jpa.repositories.UserPersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,11 +17,11 @@ import java.util.UUID;
 public class UserRepositoryImpl implements UserRepository {
 
     private final UserPersistenceRepository userPersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
-    public UserRepositoryImpl(UserPersistenceRepository userPersistenceRepository, ApplicationEventPublisher eventPublisher) {
+    public UserRepositoryImpl(UserPersistenceRepository userPersistenceRepository, DomainEventPublisher domainEventPublisher) {
         this.userPersistenceRepository = userPersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -43,10 +43,8 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public User save(User user) {
-        var events = List.copyOf(user.domainEvents());
         var saved = userPersistenceRepository.save(UserPersistenceAssembler.toPersistenceFromDomain(user));
-        events.forEach(eventPublisher::publishEvent);
-        user.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(user);
         return UserPersistenceAssembler.toDomainFromPersistence(saved);
     }
 

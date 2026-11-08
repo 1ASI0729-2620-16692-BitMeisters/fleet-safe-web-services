@@ -6,7 +6,7 @@ import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.valueobjects.R
 import com.bitmeisters.fleetsafe.platform.evaluation.domain.repositories.EvaluationRuleRepository;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.assemblers.EvaluationRulePersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.evaluation.infrastructure.persistence.jpa.repositories.EvaluationRulePersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,12 +17,12 @@ import java.util.UUID;
 public class EvaluationRuleRepositoryImpl implements EvaluationRuleRepository {
 
     private final EvaluationRulePersistenceRepository evaluationRulePersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     public EvaluationRuleRepositoryImpl(EvaluationRulePersistenceRepository evaluationRulePersistenceRepository,
-                                        ApplicationEventPublisher eventPublisher) {
+                                        DomainEventPublisher domainEventPublisher) {
         this.evaluationRulePersistenceRepository = evaluationRulePersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -44,10 +44,8 @@ public class EvaluationRuleRepositoryImpl implements EvaluationRuleRepository {
 
     @Override
     public EvaluationRule save(EvaluationRule evaluationRule) {
-        var events = List.copyOf(evaluationRule.domainEvents());
         var saved = evaluationRulePersistenceRepository.save(EvaluationRulePersistenceAssembler.toPersistenceFromDomain(evaluationRule));
-        events.forEach(eventPublisher::publishEvent);
-        evaluationRule.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(evaluationRule);
         return EvaluationRulePersistenceAssembler.toDomainFromPersistence(saved);
     }
 }

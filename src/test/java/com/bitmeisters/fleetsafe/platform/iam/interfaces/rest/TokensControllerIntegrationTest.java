@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class AuthenticationControllerIntegrationTest {
+class TokensControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,7 +55,7 @@ class AuthenticationControllerIntegrationTest {
     void returnsATokenAndTheUserForTheRightPassword() throws Exception {
         var user = register("rosa.login@andinos.pe");
 
-        var response = mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+        var response = mockMvc.perform(post("/api/v1/tokens").contentType(MediaType.APPLICATION_JSON)
                         .content(body("Rosa.Login@Andinos.pe", "S3cure!pass")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
@@ -74,7 +74,7 @@ class AuthenticationControllerIntegrationTest {
     void rejectsAWrongPasswordWithATranslatedMessage() throws Exception {
         register("rosa.wrong@andinos.pe");
 
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).header("Accept-Language", "es-419")
+        mockMvc.perform(post("/api/v1/tokens").contentType(MediaType.APPLICATION_JSON).header("Accept-Language", "es-419")
                         .content(body("rosa.wrong@andinos.pe", "Wrong!pass")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("El correo electrónico o la contraseña no son correctos."));
@@ -85,7 +85,7 @@ class AuthenticationControllerIntegrationTest {
         var user = register("rosa.inactive@andinos.pe");
         userCommandService.handle(new DeactivateUserCommand(user.getId()));
 
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/v1/tokens").contentType(MediaType.APPLICATION_JSON)
                         .content(body("rosa.inactive@andinos.pe", "S3cure!pass")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("This user is inactive and cannot sign in."));
@@ -93,14 +93,14 @@ class AuthenticationControllerIntegrationTest {
 
     @Test
     void rejectsARequestWithoutPassword() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/v1/tokens").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\": \"rosa@andinos.pe\"}"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void rejectsAnEmailWithoutAValidFormat() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/v1/tokens").contentType(MediaType.APPLICATION_JSON)
                         .content(body("not-an-email", "S3cure!pass")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("The email does not have a valid format."));

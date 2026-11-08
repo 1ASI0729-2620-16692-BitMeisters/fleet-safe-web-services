@@ -2,6 +2,7 @@ package com.bitmeisters.fleetsafe.platform.iam.domain.model.aggregates;
 
 import com.bitmeisters.fleetsafe.platform.shared.domain.model.aggregates.AbstractDomainAggregateRoot;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.commands.RegisterUserCommand;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.events.UserRegisteredEvent;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.CompanyId;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.PersonName;
@@ -38,6 +39,7 @@ public class User extends AbstractDomainAggregateRoot<User> {
 
     public User(RegisterUserCommand command, String passwordHash) {
         this(command.companyId(), command.email(), passwordHash, command.name(), command.role(), true);
+        registerDomainEvent(new UserRegisteredEvent(command.email(), command.name(), command.role()));
     }
 
     public static User restore(UUID id, CompanyId companyId, EmailAddress email, String passwordHash,
