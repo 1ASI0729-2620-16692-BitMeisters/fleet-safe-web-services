@@ -24,19 +24,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(value = "/api/v1/auth", produces = MediaType.APPLICATION_JSON_VALUE)
-@Tag(name = "Authentication", description = "Sign in and obtain an access token")
-public class AuthenticationController {
+@RequestMapping(value = "/api/v1/tokens", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "Tokens", description = "Sign in by creating an access token")
+public class TokensController {
 
     private final UserCommandService userCommandService;
     private final MessageSource messageSource;
 
-    public AuthenticationController(UserCommandService userCommandService, MessageSource messageSource) {
+    public TokensController(UserCommandService userCommandService, MessageSource messageSource) {
         this.userCommandService = userCommandService;
         this.messageSource = messageSource;
     }
 
-    @PostMapping("/login")
+    @PostMapping
     @SecurityRequirements
     @Operation(
             summary = "Sign in",
@@ -46,7 +46,7 @@ public class AuthenticationController {
                     content = @Content(schema = @Schema(implementation = AuthenticatedUserResource.class))),
             @ApiResponse(responseCode = "400", description = "Malformed request"),
             @ApiResponse(responseCode = "401", description = "Wrong email or password, or inactive user")})
-    public ResponseEntity<?> login(@Valid @RequestBody SignInResource resource) {
+    public ResponseEntity<?> createToken(@Valid @RequestBody SignInResource resource) {
         var result = userCommandService.handle(SignInCommandFromResourceAssembler.toCommandFromResource(resource));
         return ResponseEntityFromUserCommandResultAssembler.toResponseEntityFromResult(
                 result, AuthenticatedUserResourceFromEntityAssembler::toResourceFromEntity, messageSource, HttpStatus.OK);

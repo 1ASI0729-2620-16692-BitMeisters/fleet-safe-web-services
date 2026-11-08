@@ -44,6 +44,6 @@ public class OpenApiConfiguration {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("JWT Bearer token returned by POST /api/v1/auth/login")));
+                                        .description("JWT Bearer token returned by POST /api/v1/tokens")));
     }
 }

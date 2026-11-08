@@ -64,14 +64,14 @@ served at `http://localhost:8080/swagger-ui.html`.
 
 ## Authentication
 
-Every endpoint except `POST /api/v1/auth/login` and the documentation requires a JWT:
+Every endpoint except `POST /api/v1/tokens` and the documentation requires a JWT:
 
 1. Start the application with `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_COMPANY_ID` set; the first
    administrator is registered at startup.
-2. Sign in:
+2. Sign in by creating a token:
 
    ```bash
-   curl -X POST http://localhost:8080/api/v1/auth/login \
+   curl -X POST http://localhost:8080/api/v1/tokens \
      -H "Content-Type: application/json" \
      -d '{"email": "<ADMIN_EMAIL>", "password": "<ADMIN_PASSWORD>"}'
    ```
