@@ -69,7 +69,11 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
         }
 
         var incident = incidentOptional.get();
-        incident.update(command);
+        try {
+            incident.update(command);
+        } catch (IllegalStateException exception) {
+            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+        }
 
         return Result.success(incidentRepository.save(incident));
     }
@@ -84,7 +88,11 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
         }
 
         var incident = incidentOptional.get();
-        incident.resolve(command.resolutionType(), command.resolvedAt());
+        try {
+            incident.resolve(command.resolutionType(), command.resolvedAt());
+        } catch (IllegalStateException exception) {
+            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+        }
 
         return Result.success(incidentRepository.save(incident));
     }
@@ -140,7 +148,11 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
             return Result.failure(new IncidentCommandFailure.NotFound());
         }
 
-        repair.complete(command.finishedAt());
+        try {
+            repair.complete(command.finishedAt());
+        } catch (IllegalStateException exception) {
+            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+        }
 
         return Result.success(repairRepository.save(repair));
     }

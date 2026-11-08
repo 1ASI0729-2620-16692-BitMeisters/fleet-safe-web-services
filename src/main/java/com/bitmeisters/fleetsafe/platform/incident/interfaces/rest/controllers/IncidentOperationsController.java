@@ -177,7 +177,7 @@ public class IncidentOperationsController {
                 || failure instanceof IncidentCommandFailure.UnknownIncidentType
                 || failure instanceof IncidentCommandFailure.UnknownInspection
                 ? HttpStatus.NOT_FOUND
-                : HttpStatus.BAD_REQUEST;
+                : failure instanceof IncidentCommandFailure.InvalidStatus ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
 
         String detail = messageSource.getMessage(
                 failure.messageKey(),

@@ -255,6 +255,8 @@ public class IncidentController {
                 || failure instanceof IncidentCommandFailure.UnknownIncidentType
                 || failure instanceof IncidentCommandFailure.UnknownInspection) {
             status = HttpStatus.NOT_FOUND;
+        } else if (failure instanceof IncidentCommandFailure.InvalidStatus) {
+            status = HttpStatus.CONFLICT;
         } else {
             status = HttpStatus.BAD_REQUEST;
         }

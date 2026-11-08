@@ -66,7 +66,7 @@ public class Repair {
         }
 
         if (this.status == RepairStatus.COMPLETED) {
-            throw new IllegalStateException("Repair is already completed");
+            throw new IllegalStateException("incident.repair.error.invalid.status");
         }
 
         if (this.startedAt != null && finishedAt.isBefore(this.startedAt)) {
