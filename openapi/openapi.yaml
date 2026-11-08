@@ -72,6 +72,8 @@ paths:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents'
   /vehicles/{vehicleId}/documents/{documentId}:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}'
+  /vehicles/{vehicleId}/documents/{documentId}/file:
+    $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}~1file'
   /documents:
     $ref: './vehicle-documentation.yaml#/paths/~1documents'
   /documents/expiring:

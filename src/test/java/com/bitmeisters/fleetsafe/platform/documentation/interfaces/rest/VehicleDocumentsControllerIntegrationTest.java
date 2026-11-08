@@ -9,6 +9,7 @@ import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.CompanyI
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.PersonName;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.Role;
+import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,15 +17,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,6 +55,11 @@ class VehicleDocumentsControllerIntegrationTest {
     @Autowired
     private DocumentationCalendar documentationCalendar;
 
+    @MockitoBean
+    private FileStorageService fileStorageService;
+
+    private static final String STORED_FILE = "https://fleetsafe.blob.core.windows.net/evidences/soat.pdf";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private String administrator;
     private String supervisor;
@@ -68,6 +81,8 @@ class VehicleDocumentsControllerIntegrationTest {
         driver = bearer(Role.DRIVER);
         today = documentationCalendar.today();
         truck = UUID.randomUUID();
+        when(fileStorageService.store(any(), any())).thenReturn(Optional.of(STORED_FILE));
+        when(fileStorageService.temporaryReadUrl(any())).thenAnswer(invocation -> invocation.getArgument(0) == null ? null : invocation.getArgument(0) + "?sig=read");
     }
 
     private String uniqueCode() {
@@ -210,5 +225,45 @@ class VehicleDocumentsControllerIntegrationTest {
     void rejectsAnExpiringWindowLongerThanAYear() throws Exception {
         mockMvc.perform(get("/api/v1/documents/expiring").param("days", "400").header("Authorization", supervisor))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aSupervisorAttachesTheScannedDocumentAndKeepsItWhenEditingTheDocument() throws Exception {
+        var soat = registerDocumentType(uniqueCode());
+        var documentId = registerDocument(soat, "SOAT-2026-007001", today.plusYears(1));
+
+        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+                        .file(new MockMultipartFile("file", "soat.pdf", "application/pdf", new byte[] {1, 2, 3}))
+                        .header("Authorization", supervisor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fileUrl").value(STORED_FILE + "?sig=read"));
+
+        mockMvc.perform(put("/api/v1/vehicles/{vehicleId}/documents/{documentId}", truck, documentId).header("Authorization", supervisor)
+                        .contentType(MediaType.APPLICATION_JSON).content(document(soat, "SOAT-2026-007002", today.plusYears(1))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.number").value("SOAT-2026-007002"))
+                .andExpect(jsonPath("$.fileUrl").value(STORED_FILE + "?sig=read"));
+    }
+
+    @Test
+    void rejectsADocumentFileThatIsNotAnImageOrPdf() throws Exception {
+        var documentId = registerDocument(registerDocumentType(uniqueCode()), "SOAT-2026-007003", today.plusYears(1));
+
+        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+                        .file(new MockMultipartFile("file", "soat.txt", "text/plain", new byte[] {1}))
+                        .header("Authorization", supervisor).header("Accept-Language", "es-419"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("El archivo del documento debe ser JPEG, PNG o PDF."));
+    }
+
+    @Test
+    void reportsWhenTheDocumentFileCannotBeStored() throws Exception {
+        var documentId = registerDocument(registerDocumentType(uniqueCode()), "SOAT-2026-007004", today.plusYears(1));
+        when(fileStorageService.store(eq("image/png"), any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+                        .file(new MockMultipartFile("file", "soat.png", "image/png", new byte[] {1}))
+                        .header("Authorization", supervisor))
+                .andExpect(status().isServiceUnavailable());
     }
 }
