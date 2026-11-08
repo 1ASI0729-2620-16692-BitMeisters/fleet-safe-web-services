@@ -54,6 +54,8 @@ paths:
     $ref: './evaluation-and-authorization.yaml#/paths/~1vehicles~1{id}~1authorizations'
   /vehicles/{id}/block-lifts:
     $ref: './evaluation-and-authorization.yaml#/paths/~1vehicles~1{id}~1block-lifts'
+  /operational-authorizations/current:
+    $ref: './evaluation-and-authorization.yaml#/paths/~1operational-authorizations~1current'
   /operational-authorizations/overrides:
     $ref: './evaluation-and-authorization.yaml#/paths/~1operational-authorizations~1overrides'
   /evaluation-rules:
