@@ -56,7 +56,6 @@ falls back to local defaults. The `prod` profile, active in the Docker image, ha
 | `JWT_EXPIRATION_SECONDS` | lifetime of an access token | `86400` (one day) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_COMPANY_ID` | first administrator, registered at startup if no user has that email. Nothing is seeded unless the three are set | none |
 | `DOCUMENTATION_TIME_ZONE` | time zone that decides which day is today for the validity of vehicle documents and for their daily recalculation at 05:00 | `America/Lima` |
-| `SEED_DEMO_DATA` | `true` loads, once and without overwriting, the demo company of `ADMIN_COMPANY_ID`, its fleet and vehicles, the document types, the 42 inspection items and six evaluation rules (`src/main/resources/db/demo-data.sql`) | `false` |
 | `AZURE_STORAGE_CONNECTION_STRING` | connection string of the Azure Storage account that keeps the photos of the inspections. Without it, attaching a photo answers 503 | none |
 | `AZURE_STORAGE_CONTAINER` | private container of the photos | `evidences` |
 | `RESEND_API_KEY` | API key of [Resend](https://resend.com), the external service that sends the email of a newly opened account. Without it no email is sent | none |
@@ -67,6 +66,18 @@ The API documentation is served at `/swagger-ui/index.html` and `/v3/api-docs`.
 
 `DATABASE_URL` defaults to `jdbc:postgresql://localhost:5432/fleetsafe`. The API documentation is
 served at `http://localhost:8080/swagger-ui.html`.
+
+## Demo data
+
+`db/demo-data.sql` loads the demo company, its fleet and vehicles, the document types, the 42 inspection
+items and six evaluation rules. Run it once against a database whose tables the application already
+created, with the company of the first administrator (`ADMIN_COMPANY_ID`):
+
+```bash
+psql "<connection string>" -v company_id=<ADMIN_COMPANY_ID> -f db/demo-data.sql
+```
+
+Every insert ignores rows that already exist, so running it again changes nothing.
 
 ## Authentication
 
