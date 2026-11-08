@@ -17,6 +17,7 @@ Each record states one decision taken for the FleetSafe RESTful API, why it was 
 - [ADR-011: Contract-First OpenAPI Documentation](#adr-011-contract-first-openapi-documentation)
 - [ADR-012: Container Delivery to Azure Container Apps](#adr-012-container-delivery-to-azure-container-apps)
 - [ADR-013: Transactional Email through Resend](#adr-013-transactional-email-through-resend)
+- [ADR-014: Inspection Photos in Private Azure Blob Storage](#adr-014-inspection-photos-in-private-azure-blob-storage)
 
 ---
 
@@ -278,3 +279,23 @@ The course requires the platform to consume a third-party service besides its ow
 ### Consequences
 - **Positive**: the third-party integration is isolated behind a port, can be tested without network and does not affect the use case it follows.
 - **Negative**: an email that fails is lost; there is no retry or outbox.
+
+---
+
+## ADR-014: Inspection Photos in Private Azure Blob Storage
+
+### Status
+Accepted
+
+### Context
+A driver attaches photos as evidence of what an inspection found. Storing binary files in PostgreSQL would grow the database and slow its backups, and the photos of a company must not be readable by anyone who guesses their address. The platform already runs on Azure.
+
+### Decision
+1. Receive each photo as `multipart/form-data`, accept only JPEG and PNG up to 5 MB, and upload it to a **private** container of Azure Blob Storage with the official `azure-storage-blob` SDK.
+2. Keep the port in the application layer (`preoperationalinspection.application.internal.outboundservices.storage.EvidenceStorageService`) and the adapter in `preoperationalinspection.infrastructure.storage.azure`.
+3. Store only the address of the blob with the evidence; every response replaces it with a read-only SAS address that expires after one hour.
+4. Answer 503 when the photo cannot be stored, without changing the inspection, and keep working without photos when `AZURE_STORAGE_CONNECTION_STRING` is not set.
+
+### Consequences
+- **Positive**: photos never reach the database, nobody can list or read them without going through the API, and the storage can be replaced behind the port.
+- **Negative**: a photo address copied from a response stops working after an hour, and deleting an evidence does not delete its blob.
