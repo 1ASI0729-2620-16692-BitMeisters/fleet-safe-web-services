@@ -6,7 +6,7 @@ import com.bitmeisters.fleetsafe.platform.documentation.domain.model.valueobject
 import com.bitmeisters.fleetsafe.platform.documentation.domain.repositories.DocumentTypeRepository;
 import com.bitmeisters.fleetsafe.platform.documentation.infrastructure.persistence.jpa.assemblers.DocumentTypePersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.documentation.infrastructure.persistence.jpa.repositories.DocumentTypePersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,12 +16,12 @@ import java.util.Optional;
 public class DocumentTypeRepositoryImpl implements DocumentTypeRepository {
 
     private final DocumentTypePersistenceRepository documentTypePersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     public DocumentTypeRepositoryImpl(DocumentTypePersistenceRepository documentTypePersistenceRepository,
-                                      ApplicationEventPublisher eventPublisher) {
+                                      DomainEventPublisher domainEventPublisher) {
         this.documentTypePersistenceRepository = documentTypePersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -48,10 +48,8 @@ public class DocumentTypeRepositoryImpl implements DocumentTypeRepository {
 
     @Override
     public DocumentType save(DocumentType documentType) {
-        var events = List.copyOf(documentType.domainEvents());
         var saved = documentTypePersistenceRepository.save(DocumentTypePersistenceAssembler.toPersistenceFromDomain(documentType));
-        events.forEach(eventPublisher::publishEvent);
-        documentType.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(documentType);
         return DocumentTypePersistenceAssembler.toDomainFromPersistence(saved);
     }
 }

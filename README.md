@@ -26,7 +26,7 @@ the `postgres-data` volume. The same variables run the tests: `./mvnw test`.
 ## Docker image
 
 The `Dockerfile` builds the application with JDK 27 and runs it on a JRE 27 Alpine image as a
-non-root user, listening on port 8080:
+non-root user with the `prod` profile, listening on port 8080:
 
 ```bash
 docker build -t fleetsafe-api .
@@ -34,6 +34,7 @@ docker run -p 8080:8080 \
   -e DATABASE_URL=jdbc:postgresql://<host>:5432/fleetsafe \
   -e DATABASE_USER=<user> \
   -e DATABASE_PASSWORD=<password> \
+  -e JWT_SECRET=<secret> \
   fleetsafe-api
 ```
 
@@ -41,31 +42,53 @@ docker run -p 8080:8080 \
 
 ## Configuration
 
+Without `SPRING_PROFILES_ACTIVE` the application runs with the `dev` profile, which logs the SQL and
+falls back to local defaults. The `prod` profile, active in the Docker image, has no defaults for
+`DATABASE_URL` and `JWT_SECRET`: the application does not start until both are set.
+
 | Variable | Purpose | Default |
 |---|---|---|
-| `DATABASE_URL` | JDBC URL of the PostgreSQL database | `jdbc:postgresql://localhost:5432/fleetsafe` |
+| `SPRING_PROFILES_ACTIVE` | `dev` or `prod` | `dev`, and `prod` in the Docker image |
+| `DATABASE_URL` | JDBC URL of the PostgreSQL database | `jdbc:postgresql://localhost:5432/fleetsafe` in `dev`, none in `prod` |
 | `DATABASE_USER` / `DATABASE_PASSWORD` | database credentials | none |
 | `CORS_ALLOWED_ORIGINS` | comma-separated origins allowed to call `/api/**` | `http://localhost:4200,https://1asi0729-2620-16692-bitmeisters.github.io` |
-| `JWT_SECRET` | secret that signs the access tokens, at least 32 bytes. **Set it in every deployment**: the default is only for local development | a fixed development value |
+| `JWT_SECRET` | secret that signs the access tokens, at least 32 bytes. **Required in `prod`** | a fixed development value in `dev`, none in `prod` |
 | `JWT_EXPIRATION_SECONDS` | lifetime of an access token | `86400` (one day) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_COMPANY_ID` | first administrator, registered at startup if no user has that email. Nothing is seeded unless the three are set | none |
 | `DOCUMENTATION_TIME_ZONE` | time zone that decides which day is today for the validity of vehicle documents and for their daily recalculation at 05:00 | `America/Lima` |
+| `AZURE_STORAGE_CONNECTION_STRING` | connection string of the Azure Storage account that keeps the photos of the inspections. Without it, attaching a photo answers 503 | none |
+| `AZURE_STORAGE_CONTAINER` | private container of the photos | `evidences` |
+| `RESEND_API_KEY` | API key of [Resend](https://resend.com), the external service that sends the email of a newly opened account. Without it no email is sent | none |
+| `RESEND_FROM` | sender of the emails | `FleetSafe <onboarding@resend.dev>` |
+| `RESEND_RECIPIENT_OVERRIDE` | address that receives every email instead of its recipient. Resend only delivers to the owner of the account until a domain is verified, so set it to that address | none |
 
 The API documentation is served at `/swagger-ui/index.html` and `/v3/api-docs`.
 
 `DATABASE_URL` defaults to `jdbc:postgresql://localhost:5432/fleetsafe`. The API documentation is
 served at `http://localhost:8080/swagger-ui.html`.
 
+## Demo data
+
+`db/demo-data.sql` loads the demo company, its fleet and vehicles, the document types, the 42 inspection
+items and six evaluation rules. Run it once against a database whose tables the application already
+created, with the company of the first administrator (`ADMIN_COMPANY_ID`):
+
+```bash
+psql "<connection string>" -v company_id=<ADMIN_COMPANY_ID> -f db/demo-data.sql
+```
+
+Every insert ignores rows that already exist, so running it again changes nothing.
+
 ## Authentication
 
-Every endpoint except `POST /api/v1/auth/login` and the documentation requires a JWT:
+Every endpoint except `POST /api/v1/tokens` and the documentation requires a JWT:
 
 1. Start the application with `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_COMPANY_ID` set; the first
    administrator is registered at startup.
-2. Sign in:
+2. Sign in by creating a token:
 
    ```bash
-   curl -X POST http://localhost:8080/api/v1/auth/login \
+   curl -X POST http://localhost:8080/api/v1/tokens \
      -H "Content-Type: application/json" \
      -d '{"email": "<ADMIN_EMAIL>", "password": "<ADMIN_PASSWORD>"}'
    ```

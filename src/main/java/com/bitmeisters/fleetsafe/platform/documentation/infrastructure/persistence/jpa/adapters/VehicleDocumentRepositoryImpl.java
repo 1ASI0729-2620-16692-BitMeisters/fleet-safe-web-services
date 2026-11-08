@@ -5,7 +5,7 @@ import com.bitmeisters.fleetsafe.platform.documentation.domain.model.valueobject
 import com.bitmeisters.fleetsafe.platform.documentation.domain.repositories.VehicleDocumentRepository;
 import com.bitmeisters.fleetsafe.platform.documentation.infrastructure.persistence.jpa.assemblers.VehicleDocumentPersistenceAssembler;
 import com.bitmeisters.fleetsafe.platform.documentation.infrastructure.persistence.jpa.repositories.VehicleDocumentPersistenceRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import com.bitmeisters.fleetsafe.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -17,12 +17,12 @@ import java.util.UUID;
 public class VehicleDocumentRepositoryImpl implements VehicleDocumentRepository {
 
     private final VehicleDocumentPersistenceRepository vehicleDocumentPersistenceRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final DomainEventPublisher domainEventPublisher;
 
     public VehicleDocumentRepositoryImpl(VehicleDocumentPersistenceRepository vehicleDocumentPersistenceRepository,
-                                         ApplicationEventPublisher eventPublisher) {
+                                         DomainEventPublisher domainEventPublisher) {
         this.vehicleDocumentPersistenceRepository = vehicleDocumentPersistenceRepository;
-        this.eventPublisher = eventPublisher;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
@@ -53,10 +53,8 @@ public class VehicleDocumentRepositoryImpl implements VehicleDocumentRepository 
 
     @Override
     public VehicleDocument save(VehicleDocument vehicleDocument) {
-        var events = List.copyOf(vehicleDocument.domainEvents());
         var saved = vehicleDocumentPersistenceRepository.save(VehicleDocumentPersistenceAssembler.toPersistenceFromDomain(vehicleDocument));
-        events.forEach(eventPublisher::publishEvent);
-        vehicleDocument.clearDomainEvents();
+        domainEventPublisher.publishAndClearEvents(vehicleDocument);
         return VehicleDocumentPersistenceAssembler.toDomainFromPersistence(saved);
     }
 }
