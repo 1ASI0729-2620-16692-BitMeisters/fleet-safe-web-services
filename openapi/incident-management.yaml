@@ -17,9 +17,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentTypeResource'
+                $ref: '#/components/schemas/IncidentTypesResource'
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
@@ -109,9 +107,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
@@ -167,9 +163,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
 
   /incidents/vehicle/{vehicleId}:
     get:
@@ -191,9 +185,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
 
   /incidents/status/{status}:
     get:
@@ -214,9 +206,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IncidentResource'
+                $ref: '#/components/schemas/IncidentsResource'
         '400':
           $ref: './common.yaml#/components/responses/BadRequest'
 
@@ -596,3 +586,15 @@ components:
         note: {type: string}
         createdBy: {type: string, format: uuid}
         createdAt: {type: string, format: date-time}
+    IncidentTypesResource:
+      type: object
+      properties:
+        incidentTypes:
+          type: array
+          items: {$ref: '#/components/schemas/IncidentTypeResource'}
+    IncidentsResource:
+      type: object
+      properties:
+        incidents:
+          type: array
+          items: {$ref: '#/components/schemas/IncidentResource'}
