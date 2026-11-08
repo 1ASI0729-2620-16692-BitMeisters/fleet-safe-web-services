@@ -4,6 +4,7 @@ import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.InspectionItemId;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.ItemCategory;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.ItemCode;
+import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.ItemSystem;
 
 import java.util.List;
 import java.util.Optional;
@@ -54,6 +55,15 @@ public interface InspectionItemRepository {
      * @return ordered list of matching active items
      */
     List<InspectionItem> findAllByActiveTrueAndCategoryOrderByDisplayOrderAsc(ItemCategory category);
+
+    /**
+     * Retrieves inspection items matching optional system and active status filters.
+     *
+     * @param system optional system filter
+     * @param active optional active status filter
+     * @return ordered list of matching items
+     */
+    List<InspectionItem> findAllByFilters(ItemSystem system, Boolean active);
 
     /**
      * Saves an inspection item aggregate.
