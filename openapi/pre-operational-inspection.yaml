@@ -39,8 +39,8 @@ paths:
       operationId: getInspections
       summary: List inspections
       description: >-
-        Roles: FLEET_SUPERVISOR sees every inspection of the company; DRIVER only sees their own,
-        and the driverId filter is ignored.
+        Roles: FLEET_SUPERVISOR and ADMINISTRATOR see every inspection; DRIVER only sees their own.
+        Newest first.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
         - name: vehicleId
@@ -48,42 +48,15 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: driverId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/InspectionStatus'
-        - name: from
-          in: query
-          description: Inspections started on or after this date.
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          description: Inspections started on or before this date.
-          schema:
-            type: string
-            format: date
-        - $ref: './common.yaml#/components/parameters/Page'
-        - $ref: './common.yaml#/components/parameters/Size'
-        - name: sort
-          in: query
-          description: 'Allowed fields: startedAt, completedAt.'
-          schema:
-            type: string
-            default: startedAt,desc
       responses:
         '200':
-          description: Page of inspections.
+          description: Inspections, newest first.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InspectionSummaryPage'
+                type: array
+                items:
+                  $ref: '#/components/schemas/InspectionResource'
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
@@ -91,9 +64,9 @@ paths:
       operationId: startInspection
       summary: Start a pre-operational inspection
       description: >-
-        Roles: DRIVER. The driver comes from the token and the vehicle from their active
-        assignment, so neither is sent. Rejected with 409 when the driver has no assigned vehicle
-        or when the vehicle already has an inspection in progress.
+        Roles: DRIVER. The driver comes from the token and the vehicle is sent in the body until
+        vehicle assignments exist. Rejected with 409 when the vehicle already has an inspection in
+        progress.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
       requestBody:
@@ -430,8 +403,12 @@ components:
 
     StartInspectionResource:
       type: object
-      required: [odometer]
+      required: [vehicleId, odometer]
       properties:
+        vehicleId:
+          type: string
+          format: uuid
+          description: Vehicle to inspect.
         odometer:
           type: integer
           minimum: 0
