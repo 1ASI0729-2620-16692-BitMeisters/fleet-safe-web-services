@@ -1,6 +1,7 @@
 package com.bitmeisters.fleetsafe.platform.iam.domain.model.aggregates;
 
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.commands.RegisterUserCommand;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.events.UserRegisteredEvent;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.CompanyId;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.PersonName;
@@ -22,6 +23,21 @@ class UserTest {
                 "S3cure!pass",
                 new PersonName("Rosa", "Quispe"),
                 Role.FLEET_SUPERVISOR), "$2a$10$hash");
+    }
+
+    @Test
+    void announcesItsRegistration() {
+        assertThat(supervisor().domainEvents()).containsExactly(new UserRegisteredEvent(
+                new EmailAddress("supervisor@transportesandinos.pe"), new PersonName("Rosa", "Quispe"), Role.FLEET_SUPERVISOR));
+    }
+
+    @Test
+    void announcesNothingWhenRestoredFromTheDatabase() {
+        var user = User.restore(UUID.randomUUID(), new CompanyId(UUID.randomUUID()),
+                new EmailAddress("driver@transportesandinos.pe"), "$2a$10$hash", new PersonName("Luis", "Mamani"),
+                Role.DRIVER, true, Instant.now(), Instant.now());
+
+        assertThat(user.domainEvents()).isEmpty();
     }
 
     @Test
