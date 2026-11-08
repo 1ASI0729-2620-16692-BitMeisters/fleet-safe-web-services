@@ -1,0 +1,155 @@
+package com.bitmeisters.fleetsafe.platform.incident;
+
+import com.bitmeisters.fleetsafe.platform.iam.application.commandservices.UserCommandService;
+import com.bitmeisters.fleetsafe.platform.iam.application.internal.outboundservices.tokens.TokenService;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.aggregates.User;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.commands.RegisterUserCommand;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.CompanyId;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAddress;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.PersonName;
+import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.Role;
+import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class IncidentFlowIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private UserCommandService userCommandService;
+
+    @Autowired
+    private TokenService tokenService;
+
+    private String administratorToken;
+    private String supervisorToken;
+    private String driverToken;
+    private UUID supervisorId;
+    private final UUID vehicleId = UUID.randomUUID();
+
+    private User register(Role role) {
+        return userCommandService.handle(new RegisterUserCommand(new CompanyId(UUID.randomUUID()),
+                new EmailAddress(role.name().toLowerCase() + "-" + UUID.randomUUID() + "@andinos.pe"), "S3cure!pass",
+                new PersonName("Ana", "Quispe"), role)).success().orElseThrow();
+    }
+
+    @BeforeEach
+    void setUp() {
+        administratorToken = "Bearer " + tokenService.generateToken(register(Role.ADMINISTRATOR));
+        var supervisor = register(Role.FLEET_SUPERVISOR);
+        supervisorId = supervisor.getId();
+        supervisorToken = "Bearer " + tokenService.generateToken(supervisor);
+        driverToken = "Bearer " + tokenService.generateToken(register(Role.DRIVER));
+    }
+
+    private String registerIncidentType() throws Exception {
+        var response = mockMvc.perform(post("/api/v1/incident-types").header("Authorization", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\": \"MEC-" + UUID.randomUUID().toString().substring(0, 6) + "\", \"name\": \"Mechanical failure\", \"description\": \"A part of the vehicle stopped working.\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
+    private String reportIncident(String incidentTypeId) throws Exception {
+        var response = mockMvc.perform(post("/api/v1/incidents").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vehicleId\": \"" + vehicleId + "\", \"incidentTypeId\": \"" + incidentTypeId
+                                + "\", \"origin\": \"OPERATION\", \"description\": \"The brakes make noise.\", \"severity\": \"HIGH\", \"reportedBy\": \""
+                                + supervisorId + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(response, "$.id");
+    }
+
+    @Test
+    void aSupervisorFollowsAnIncidentUntilItIsResolved() throws Exception {
+        var incidentId = reportIncident(registerIncidentType());
+
+        mockMvc.perform(post("/api/v1/incidents/{id}/corrective-actions", incidentId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"description\": \"Brake pads replaced.\", \"performedBy\": \""
+                                + supervisorId + "\", \"performedAt\": \"2026-11-08T10:00:00Z\"}"))
+                .andExpect(status().isCreated());
+
+        var repair = mockMvc.perform(post("/api/v1/incidents/{id}/repairs", incidentId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"workshop\": \"Taller Norte\", \"cost\": 350.00, \"startedAt\": \"2026-11-08T11:00:00Z\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String repairId = JsonPath.read(repair, "$.id");
+
+        mockMvc.perform(patch("/api/v1/incidents/{id}/repairs/{repairId}/complete", incidentId, repairId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"repairId\": \"" + repairId + "\", \"finishedAt\": \"2026-11-08T15:00:00Z\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/incidents/{id}/follow-ups", incidentId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"note\": \"Tested on the yard.\", \"createdBy\": \""
+                                + supervisorId + "\", \"createdAt\": \"2026-11-08T16:00:00Z\"}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \"2026-11-08T17:00:00Z\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolutionType").value("REPAIRED"));
+
+        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId).header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \"2026-11-08T18:00:00Z\"}"))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(get("/api/v1/incidents/{id}", incidentId).header("Authorization", driverToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void reportsAnUnknownIncidentTypeInTheLanguageOfTheRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/incidents").header("Authorization", supervisorToken).header("Accept-Language", "es-419")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vehicleId\": \"" + vehicleId + "\", \"incidentTypeId\": \"" + UUID.randomUUID()
+                                + "\", \"origin\": \"OPERATION\", \"description\": \"Flat tire.\", \"severity\": \"LOW\", \"reportedBy\": \""
+                                + supervisorId + "\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("El tipo de incidencia no existe."));
+    }
+
+    @Test
+    void onlyAnAdministratorDefinesIncidentTypes() throws Exception {
+        mockMvc.perform(post("/api/v1/incident-types").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\": \"ELE-01\", \"name\": \"Electrical failure\", \"description\": \"Lights or battery.\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aDriverCannotResolveAnIncident() throws Exception {
+        var incidentId = reportIncident(registerIncidentType());
+
+        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId).header("Authorization", driverToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \"2026-11-08T17:00:00Z\"}"))
+                .andExpect(status().isForbidden());
+    }
+}
