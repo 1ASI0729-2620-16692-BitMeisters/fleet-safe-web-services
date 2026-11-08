@@ -96,7 +96,6 @@ public class InspectionItem extends AbstractDomainAggregateRoot<InspectionItem> 
     public InspectionItem(ItemCode code, ItemName name, String description,
                           ItemCategory category, ItemSystem system,
                           boolean safetyComponent, boolean requiresEvidence, int displayOrder) {
-        this.id = new InspectionItemId();
         this.code = code;
         this.name = name;
         this.description = description != null ? description.strip() : "";

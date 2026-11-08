@@ -78,7 +78,6 @@ public class InspectionResult {
         if (result == null) {
             throw new IllegalArgumentException("inspection.result.error.result-value.required");
         }
-        this.id = new InspectionResultId();
         this.inspectionItemId = inspectionItemId;
         this.itemName = itemName;
         this.itemCategory = itemCategory;
@@ -155,7 +154,7 @@ public class InspectionResult {
      */
     public void attachEvidenceToObservation(ObservationId observationId, FileUrl fileUrl, MediaType mediaType) {
         var observation = observations.stream()
-                .filter(obs -> obs.getId().equals(observationId))
+                .filter(obs -> observationId.equals(obs.getId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("inspection.error.observation-not-found"));
         observation.attachEvidence(fileUrl, mediaType);

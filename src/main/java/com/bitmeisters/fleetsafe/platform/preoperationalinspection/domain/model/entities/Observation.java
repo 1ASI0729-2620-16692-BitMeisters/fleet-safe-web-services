@@ -59,7 +59,6 @@ public class Observation {
         if (createdBy == null) {
             throw new IllegalArgumentException("inspection.observation.error.created-by.required");
         }
-        this.id = new ObservationId();
         this.description = description;
         this.createdBy = createdBy;
         this.createdAt = Instant.now();

@@ -96,7 +96,6 @@ public class Inspection extends AbstractDomainAggregateRoot<Inspection> {
      * @param odometer  the odometer reading
      */
     public Inspection(VehicleId vehicleId, DriverId driverId, Odometer odometer) {
-        this.id = new InspectionId();
         this.vehicleId = vehicleId;
         this.driverId = driverId;
         this.odometer = odometer;
@@ -233,7 +232,7 @@ public class Inspection extends AbstractDomainAggregateRoot<Inspection> {
                     throw new IllegalArgumentException("inspection.complete.error.missing-observation");
                 }
                 var catalogItem = activeCatalogItems.stream()
-                        .filter(item -> item.getId().equals(res.getInspectionItemId()))
+                        .filter(item -> res.getInspectionItemId().equals(item.getId()))
                         .findFirst();
                 if (catalogItem.isPresent() && catalogItem.get().isRequiresEvidence() && !res.hasEvidences()) {
                     throw new IllegalArgumentException("inspection.complete.error.missing-evidence");
@@ -257,7 +256,7 @@ public class Inspection extends AbstractDomainAggregateRoot<Inspection> {
 
     private InspectionResult findResultById(InspectionResultId resultId) {
         return results.stream()
-                .filter(r -> r.getId().equals(resultId))
+                .filter(r -> resultId.equals(r.getId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("inspection.error.result-not-found"));
     }

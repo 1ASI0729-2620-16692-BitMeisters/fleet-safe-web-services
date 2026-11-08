@@ -45,7 +45,6 @@ public class Evidence {
      * @param mediaType the media format of the file
      */
     public Evidence(FileUrl fileUrl, MediaType mediaType) {
-        this.id = new EvidenceId();
         this.fileUrl = fileUrl;
         this.mediaType = mediaType;
         this.uploadedAt = Instant.now();
