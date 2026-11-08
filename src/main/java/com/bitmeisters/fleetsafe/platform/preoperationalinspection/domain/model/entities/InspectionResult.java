@@ -75,6 +75,7 @@ public class InspectionResult {
      */
     public InspectionResult(InspectionItemId inspectionItemId, ItemName itemName,
                             ItemCategory itemCategory, ResultValue result) {
+        this.id = null;
         if (result == null) {
             throw new IllegalArgumentException("inspection.result.error.result-value.required");
         }

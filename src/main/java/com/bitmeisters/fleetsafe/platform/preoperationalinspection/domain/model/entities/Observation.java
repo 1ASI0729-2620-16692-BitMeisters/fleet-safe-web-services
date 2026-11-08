@@ -56,6 +56,7 @@ public class Observation {
      * @param createdBy   the identifier of the author
      */
     public Observation(ObservationDescription description, UUID createdBy) {
+        this.id = null;
         if (createdBy == null) {
             throw new IllegalArgumentException("inspection.observation.error.created-by.required");
         }
