@@ -56,6 +56,7 @@ falls back to local defaults. The `prod` profile, active in the Docker image, ha
 | `JWT_EXPIRATION_SECONDS` | lifetime of an access token | `86400` (one day) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_COMPANY_ID` | first administrator, registered at startup if no user has that email. Nothing is seeded unless the three are set | none |
 | `DOCUMENTATION_TIME_ZONE` | time zone that decides which day is today for the validity of vehicle documents and for their daily recalculation at 05:00 | `America/Lima` |
+| `SEED_DEMO_DATA` | `true` loads, once and without overwriting, the demo company of `ADMIN_COMPANY_ID`, its fleet and vehicles, the document types, the 42 inspection items and six evaluation rules (`src/main/resources/db/demo-data.sql`) | `false` |
 | `AZURE_STORAGE_CONNECTION_STRING` | connection string of the Azure Storage account that keeps the photos of the inspections. Without it, attaching a photo answers 503 | none |
 | `AZURE_STORAGE_CONTAINER` | private container of the photos | `evidences` |
 | `RESEND_API_KEY` | API key of [Resend](https://resend.com), the external service that sends the email of a newly opened account. Without it no email is sent | none |
