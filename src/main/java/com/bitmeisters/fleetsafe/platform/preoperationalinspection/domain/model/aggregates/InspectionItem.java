@@ -172,38 +172,6 @@ public class InspectionItem extends AbstractDomainAggregateRoot<InspectionItem> 
         this.updatedAt = Instant.now();
     }
 
-    /**
-     * Updates the catalog item specifications.
-     *
-     * @param name             the updated descriptive name
-     * @param description      detailed instructions
-     * @param category         the updated category
-     * @param system           the updated vehicle system
-     * @param safetyComponent  whether it is a safety component
-     * @param requiresEvidence whether evidence is mandatory on failure
-     * @param displayOrder     the updated display order
-     */
-    public void update(ItemName name, String description,
-                       ItemCategory category, ItemSystem system,
-                       boolean safetyComponent, boolean requiresEvidence, int displayOrder) {
-        if (name == null) {
-            throw new IllegalArgumentException("inspection.item.error.name.required");
-        }
-        if (category == null) {
-            throw new IllegalArgumentException("inspection.item.error.category.required");
-        }
-        if (system == null) {
-            throw new IllegalArgumentException("inspection.item.error.system.required");
-        }
-        this.name = name;
-        this.description = description != null ? description.strip() : "";
-        this.category = category;
-        this.system = system;
-        this.safetyComponent = safetyComponent;
-        this.requiresEvidence = requiresEvidence;
-        this.displayOrder = displayOrder;
-        this.updatedAt = Instant.now();
-    }
 
     /**
      * Deactivates the item from the active inspection checklist catalog.
