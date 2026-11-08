@@ -42,7 +42,7 @@ public class InspectionEvaluationsController {
             description = "Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Completed inspections are evaluated automatically; this evaluates one that was not.")
     public ResponseEntity<?> evaluateInspection(@PathVariable UUID id, Authentication authentication) {
         return externalInspectionService.evaluationOf(id, UUID.fromString(authentication.getName()))
-                .map(command -> ResponseEntityFromEvaluationCommandResultAssembler.toResponseEntityFromResult(
+                .<ResponseEntity<?>>map(command -> ResponseEntityFromEvaluationCommandResultAssembler.toResponseEntityFromResult(
                         evaluationCommandService.handle(command), messageSource, HttpStatus.OK))
                 .orElseGet(() -> {
                     var detail = messageSource.getMessage("evaluation.error.inspection-not-found", null,
