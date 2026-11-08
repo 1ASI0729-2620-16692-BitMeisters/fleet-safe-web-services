@@ -8,6 +8,7 @@ import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.CompanyI
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.EmailAddress;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.PersonName;
 import com.bitmeisters.fleetsafe.platform.iam.domain.model.valueobjects.Role;
+import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,12 +16,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,6 +46,11 @@ class IncidentFlowIntegrationTest {
 
     @Autowired
     private TokenService tokenService;
+
+    @MockitoBean
+    private FileStorageService fileStorageService;
+
+    private static final String STORED_EVIDENCE = "https://fleetsafe.blob.core.windows.net/evidences/brakes.jpg";
 
     private String administratorToken;
     private String supervisorToken;
@@ -59,6 +71,8 @@ class IncidentFlowIntegrationTest {
         supervisorId = supervisor.getId();
         supervisorToken = "Bearer " + tokenService.generateToken(supervisor);
         driverToken = "Bearer " + tokenService.generateToken(register(Role.DRIVER));
+        when(fileStorageService.store(any(), any())).thenReturn(Optional.of(STORED_EVIDENCE));
+        when(fileStorageService.temporaryReadUrl(any())).thenAnswer(invocation -> invocation.getArgument(0) == null ? null : invocation.getArgument(0) + "?sig=read");
     }
 
     private String registerIncidentType() throws Exception {
@@ -85,11 +99,20 @@ class IncidentFlowIntegrationTest {
     void aSupervisorFollowsAnIncidentUntilItIsResolved() throws Exception {
         var incidentId = reportIncident(registerIncidentType());
 
-        mockMvc.perform(post("/api/v1/incidents/{id}/corrective-actions", incidentId).header("Authorization", supervisorToken)
+        var action = mockMvc.perform(post("/api/v1/incidents/{id}/corrective-actions", incidentId).header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"incidentId\": \"" + incidentId + "\", \"description\": \"Brake pads replaced.\", \"performedBy\": \""
                                 + supervisorId + "\", \"performedAt\": \"2026-11-08T10:00:00Z\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.performedByName").value("Ana Quispe"))
+                .andReturn().getResponse().getContentAsString();
+        String actionId = JsonPath.read(action, "$.id");
+
+        mockMvc.perform(multipart("/api/v1/incidents/{id}/corrective-actions/{actionId}/evidence", incidentId, actionId)
+                        .file(new MockMultipartFile("file", "brakes.jpg", "image/jpeg", new byte[] {1, 2, 3}))
+                        .header("Authorization", supervisorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidenceUrl").value(STORED_EVIDENCE + "?sig=read"));
 
         var repair = mockMvc.perform(post("/api/v1/incidents/{id}/repairs", incidentId).header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +144,10 @@ class IncidentFlowIntegrationTest {
                 .andExpect(status().isConflict());
 
         mockMvc.perform(get("/api/v1/incidents/{id}", incidentId).header("Authorization", driverToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportedByName").value("Ana Quispe"))
+                .andExpect(jsonPath("$.correctiveActions[0].evidenceUrl").value(STORED_EVIDENCE + "?sig=read"))
+                .andExpect(jsonPath("$.followUps[0].createdByName").value("Ana Quispe"));
     }
 
     @Test

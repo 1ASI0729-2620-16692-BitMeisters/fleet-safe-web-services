@@ -4,6 +4,7 @@ import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.I
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandService;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.aggregates.Incident;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AddIncidentFollowUpCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.AttachCorrectiveActionEvidenceCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.CompleteRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.RegisterCorrectiveActionCommand;
@@ -121,6 +122,22 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
 
         return Result.success(
                 correctiveActionRepository.save(new CorrectiveAction(command)));
+    }
+
+    @Override
+    @Transactional
+    public Result<CorrectiveAction, IncidentCommandFailure> handle(AttachCorrectiveActionEvidenceCommand command) {
+        var actionOptional = correctiveActionRepository.findById(command.correctiveActionId())
+                .filter(action -> action.getIncidentId().equals(command.incidentId()));
+
+        if (actionOptional.isEmpty()) {
+            return Result.failure(new IncidentCommandFailure.NotFound());
+        }
+
+        var action = actionOptional.get();
+        action.attachEvidence(command.evidenceUrl());
+
+        return Result.success(correctiveActionRepository.save(action));
     }
 
     @Override

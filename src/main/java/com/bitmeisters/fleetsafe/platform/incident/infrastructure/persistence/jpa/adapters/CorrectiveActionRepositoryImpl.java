@@ -7,6 +7,7 @@ import com.bitmeisters.fleetsafe.platform.incident.infrastructure.persistence.jp
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -17,6 +18,12 @@ public class CorrectiveActionRepositoryImpl implements CorrectiveActionRepositor
     public CorrectiveActionRepositoryImpl(
             CorrectiveActionPersistenceRepository persistenceRepository) {
         this.persistenceRepository = persistenceRepository;
+    }
+
+    @Override
+    public Optional<CorrectiveAction> findById(UUID id) {
+        return persistenceRepository.findById(id)
+                .map(CorrectiveActionPersistenceAssembler::toDomainFromPersistence);
     }
 
     @Override

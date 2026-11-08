@@ -8,6 +8,7 @@ public record CorrectiveActionResource(
         UUID incidentId,
         String description,
         UUID performedBy,
+        String performedByName,
         Instant performedAt,
         String evidenceUrl
 ) {

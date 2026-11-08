@@ -7,6 +7,9 @@ import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.Repair;
 import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.IncidentResource;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class IncidentAssembler {
 
@@ -14,10 +17,13 @@ public class IncidentAssembler {
     private final RepairAssembler repairAssembler;
     private final IncidentFollowUpAssembler incidentFollowUpAssembler;
 
-    public IncidentAssembler() {
-        this.correctiveActionAssembler = new CorrectiveActionAssembler();
+    private final Function<UUID, String> nameOf;
+
+    public IncidentAssembler(Function<UUID, String> nameOf, UnaryOperator<String> readUrlOf) {
+        this.nameOf = nameOf;
+        this.correctiveActionAssembler = new CorrectiveActionAssembler(nameOf, readUrlOf);
         this.repairAssembler = new RepairAssembler();
-        this.incidentFollowUpAssembler = new IncidentFollowUpAssembler();
+        this.incidentFollowUpAssembler = new IncidentFollowUpAssembler(nameOf);
     }
 
     public IncidentResource toResourceFromEntity(
@@ -36,6 +42,7 @@ public class IncidentAssembler {
                 entity.getSeverity(),
                 entity.getStatus(),
                 entity.getReportedBy(),
+                nameOf.apply(entity.getReportedBy()),
                 entity.getReportedAt(),
                 entity.getResolutionType(),
                 entity.getResolvedAt(),

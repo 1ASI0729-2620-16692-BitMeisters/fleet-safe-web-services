@@ -18,6 +18,7 @@ public record IncidentResource(
         IncidentSeverity severity,
         IncidentStatus status,
         UUID reportedBy,
+        String reportedByName,
         Instant reportedAt,
         String resolutionType,
         Instant resolvedAt,

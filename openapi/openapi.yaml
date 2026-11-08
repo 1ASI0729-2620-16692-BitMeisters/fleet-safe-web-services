@@ -94,6 +94,8 @@ paths:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1resolve'
   /incidents/{id}/corrective-actions:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions'
+  /incidents/{id}/corrective-actions/{correctiveActionId}/evidence:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions~1{correctiveActionId}~1evidence'
   /incidents/{id}/repairs:
     $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs'
   /incidents/{id}/repairs/{repairId}/complete:
