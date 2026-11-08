@@ -70,7 +70,7 @@ served at `http://localhost:8080/swagger-ui.html`.
 ## Demo data
 
 `db/demo-data.sql` loads the demo company, its fleet and vehicles, the document types, the 42 inspection
-items and six evaluation rules. Run it once against a database whose tables the application already
+items, six evaluation rules and four incident types. Run it once against a database whose tables the application already
 created, with the company of the first administrator (`ADMIN_COMPANY_ID`):
 
 ```bash
