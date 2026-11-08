@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-08
+
+### Added
+- Files are kept in a private Azure Blob Storage container shared by every context, with links to read them valid for one hour.
+- The evidence of a corrective action and the scanned file of a vehicle document are attached as JPEG, PNG or PDF files.
+- Incidents name the users who report them, perform their corrective actions and write their follow-ups, through a facade of Identity and Access.
+- Four incident types in the demo data.
+
+### Fixed
+- Editing a vehicle document keeps its attached file.
+- Invalid changes of status of an incident or a repair answer 409 instead of failing.
+
 ## [0.2.0] - 2026-11-08
 
 ### Added
@@ -24,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - OpenAPI contract with the shared components, Identity and Access, the active vehicle assignment of the driver, and Pre-Operational Inspection with its item catalog grouped by vehicle system.
 
-[Unreleased]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/1ASI0729-2620-16692-BitMeisters/fleet-safe-web-services/releases/tag/v0.1.0
