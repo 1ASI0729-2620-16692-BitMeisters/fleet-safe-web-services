@@ -50,6 +50,9 @@ docker run -p 8080:8080 \
 | `JWT_EXPIRATION_SECONDS` | lifetime of an access token | `86400` (one day) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_COMPANY_ID` | first administrator, registered at startup if no user has that email. Nothing is seeded unless the three are set | none |
 | `DOCUMENTATION_TIME_ZONE` | time zone that decides which day is today for the validity of vehicle documents and for their daily recalculation at 05:00 | `America/Lima` |
+| `RESEND_API_KEY` | API key of [Resend](https://resend.com), the external service that sends the email of a newly opened account. Without it no email is sent | none |
+| `RESEND_FROM` | sender of the emails | `FleetSafe <onboarding@resend.dev>` |
+| `RESEND_RECIPIENT_OVERRIDE` | address that receives every email instead of its recipient. Resend only delivers to the owner of the account until a domain is verified, so set it to that address | none |
 
 The API documentation is served at `/swagger-ui/index.html` and `/v3/api-docs`.
 
