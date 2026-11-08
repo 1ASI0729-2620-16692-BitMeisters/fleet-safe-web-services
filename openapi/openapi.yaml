@@ -23,6 +23,8 @@ tags:
     description: Evaluation rules, evaluation of inspections and the operational authorization of each vehicle.
   - name: Vehicle Documentation
     description: Document types and the documents of each vehicle, with their validity.
+  - name: Incident Management
+    description: Incidents of the vehicles, their corrective actions, repairs and follow-ups.
 paths:
   /tokens:
     $ref: './identity-and-access.yaml#/paths/~1tokens'
@@ -74,6 +76,31 @@ paths:
     $ref: './vehicle-documentation.yaml#/paths/~1documents'
   /documents/expiring:
     $ref: './vehicle-documentation.yaml#/paths/~1documents~1expiring'
+  /incident-types:
+    $ref: './incident-management.yaml#/paths/~1incident-types'
+  /incident-types/{id}:
+    $ref: './incident-management.yaml#/paths/~1incident-types~1{id}'
+  /incidents:
+    $ref: './incident-management.yaml#/paths/~1incidents'
+  /incidents/search:
+    $ref: './incident-management.yaml#/paths/~1incidents~1search'
+  /incidents/vehicle/{vehicleId}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1vehicle~1{vehicleId}'
+  /incidents/status/{status}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1status~1{status}'
+  /incidents/{id}:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}'
+  /incidents/{id}/resolve:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1resolve'
+  /incidents/{id}/corrective-actions:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1corrective-actions'
+  /incidents/{id}/repairs:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs'
+  /incidents/{id}/repairs/{repairId}/complete:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1repairs~1{repairId}~1complete'
+  /incidents/{id}/follow-ups:
+    $ref: './incident-management.yaml#/paths/~1incidents~1{id}~1follow-ups'
+
 components:
   securitySchemes:
     bearerAuth:
