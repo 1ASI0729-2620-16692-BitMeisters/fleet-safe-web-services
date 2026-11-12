@@ -38,19 +38,28 @@ public class Incident extends AbstractDomainAggregateRoot<Incident> {
     }
 
     public Incident(ReportIncidentCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("incident.error.command.required");
+        }
+
         this.vehicleId = command.vehicleId();
         this.incidentTypeId = command.incidentTypeId();
         this.inspectionId = command.inspectionId();
+
         this.origin = command.origin();
-        this.description = command.description();
+        this.description = normalizeDescription(command.description());
         this.severity = command.severity();
+
         this.status = IncidentStatus.REGISTERED;
+
         this.reportedBy = command.reportedBy();
         this.reportedAt = Timestamps.now();
-        this.createdAt = this.reportedAt;
-        this.updatedAt = this.reportedAt;
+
         this.resolutionType = null;
         this.resolvedAt = null;
+
+        this.createdAt = this.reportedAt;
+        this.updatedAt = this.reportedAt;
     }
 
     public static Incident restore(
@@ -75,14 +84,18 @@ public class Incident extends AbstractDomainAggregateRoot<Incident> {
         incident.vehicleId = vehicleId;
         incident.incidentTypeId = incidentTypeId;
         incident.inspectionId = inspectionId;
+
         incident.origin = origin;
         incident.description = description;
         incident.severity = severity;
         incident.status = status;
+
         incident.reportedBy = reportedBy;
         incident.reportedAt = reportedAt;
+
         incident.resolutionType = resolutionType;
         incident.resolvedAt = resolvedAt;
+
         incident.createdAt = createdAt;
         incident.updatedAt = updatedAt;
 
@@ -90,18 +103,32 @@ public class Incident extends AbstractDomainAggregateRoot<Incident> {
     }
 
     public void update(UpdateIncidentCommand command) {
-        if (status == IncidentStatus.RESOLVED || status == IncidentStatus.CLOSED) {
-            throw new IllegalStateException("incident.error.invalid-status");
+        if (command == null) {
+            throw new IllegalArgumentException("incident.error.command.required");
         }
+
+        ensureEditable();
 
         this.vehicleId = command.vehicleId();
         this.incidentTypeId = command.incidentTypeId();
         this.inspectionId = command.inspectionId();
+
         this.origin = command.origin();
-        this.description = command.description();
+        this.description = normalizeDescription(command.description());
         this.severity = command.severity();
-        this.reportedBy = command.reportedBy();
+
+        // reportedBy and reportedAt are historical data.
+        // They must not change when an incident is updated.
+
         this.updatedAt = Timestamps.now();
+    }
+
+    public void assertCanRegisterCorrectiveAction() {
+        if (status != IncidentStatus.IN_REVIEW) {
+            throw new IllegalStateException(
+                    "incident.error.corrective-action.invalid-status"
+            );
+        }
     }
 
     public void startReview() {
@@ -120,15 +147,22 @@ public class Incident extends AbstractDomainAggregateRoot<Incident> {
         }
 
         if (resolutionType == null || resolutionType.isBlank()) {
-            throw new IllegalArgumentException("incident.error.invalid-resolution-type");
+            throw new IllegalArgumentException(
+                    "incident.error.invalid-resolution-type");
         }
 
         if (resolvedAt == null) {
-            throw new IllegalArgumentException("incident.error.invalid-resolution-date");
+            throw new IllegalArgumentException(
+                    "incident.error.invalid-resolution-date");
+        }
+
+        if (reportedAt != null && resolvedAt.isBefore(reportedAt)) {
+            throw new IllegalArgumentException(
+                    "incident.error.resolution-date-before-report");
         }
 
         this.status = IncidentStatus.RESOLVED;
-        this.resolutionType = resolutionType;
+        this.resolutionType = resolutionType.trim();
         this.resolvedAt = resolvedAt;
         this.updatedAt = Timestamps.now();
     }
@@ -140,5 +174,21 @@ public class Incident extends AbstractDomainAggregateRoot<Incident> {
 
         this.status = IncidentStatus.CLOSED;
         this.updatedAt = Timestamps.now();
+    }
+
+    private void ensureEditable() {
+        if (status == IncidentStatus.RESOLVED
+                || status == IncidentStatus.CLOSED) {
+            throw new IllegalStateException("incident.error.invalid-status");
+        }
+    }
+
+    private String normalizeDescription(String description) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException(
+                    "incident.error.description.required");
+        }
+
+        return description.trim();
     }
 }
