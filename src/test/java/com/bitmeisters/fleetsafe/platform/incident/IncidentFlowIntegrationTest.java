@@ -21,6 +21,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -98,11 +100,21 @@ class IncidentFlowIntegrationTest {
     @Test
     void aSupervisorFollowsAnIncidentUntilItIsResolved() throws Exception {
         var incidentId = reportIncident(registerIncidentType());
+        Instant baseTime = Instant.now().plusSeconds(60).truncatedTo(ChronoUnit.SECONDS);
 
-        var action = mockMvc.perform(post("/api/v1/incidents/{id}/corrective-actions", incidentId).header("Authorization", supervisorToken)
+        // Move the incident from REGISTERED to IN_REVIEW.
+        mockMvc.perform(patch("/api/v1/incidents/{id}/status", incidentId)
+                        .header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"status\": \"IN_REVIEW\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("IN_REVIEW"));
+
+        var action = mockMvc.perform(post("/api/v1/incidents/{id}/corrective-actions", incidentId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"incidentId\": \"" + incidentId + "\", \"description\": \"Brake pads replaced.\", \"performedBy\": \""
-                                + supervisorId + "\", \"performedAt\": \"2026-11-08T10:00:00Z\"}"))
+                                + supervisorId + "\", \"performedAt\": \"" + baseTime.plusSeconds(1800) + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.performedByName").value("Ana Quispe"))
                 .andReturn().getResponse().getContentAsString();
@@ -114,36 +126,46 @@ class IncidentFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.evidenceUrl").value(STORED_EVIDENCE + "?sig=read"));
 
-        var repair = mockMvc.perform(post("/api/v1/incidents/{id}/repairs", incidentId).header("Authorization", supervisorToken)
+        var repair = mockMvc.perform(post("/api/v1/incidents/{id}/repairs", incidentId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"incidentId\": \"" + incidentId + "\", \"workshop\": \"Taller Norte\", \"cost\": 350.00, \"startedAt\": \"2026-11-08T11:00:00Z\"}"))
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"workshop\": \"Taller Norte\", \"cost\": 350.00, \"startedAt\": \""
+                                + baseTime.plusSeconds(3600) + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String repairId = JsonPath.read(repair, "$.id");
 
-        mockMvc.perform(patch("/api/v1/incidents/{id}/repairs/{repairId}/complete", incidentId, repairId).header("Authorization", supervisorToken)
+        mockMvc.perform(patch("/api/v1/incidents/{id}/repairs/{repairId}/complete", incidentId, repairId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"incidentId\": \"" + incidentId + "\", \"repairId\": \"" + repairId + "\", \"finishedAt\": \"2026-11-08T15:00:00Z\"}"))
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"repairId\": \"" + repairId
+                                + "\", \"finishedAt\": \"" + baseTime.plusSeconds(14400) + "\"}"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/incidents/{id}/follow-ups", incidentId).header("Authorization", supervisorToken)
+        mockMvc.perform(post("/api/v1/incidents/{id}/follow-ups", incidentId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"incidentId\": \"" + incidentId + "\", \"note\": \"Tested on the yard.\", \"createdBy\": \""
-                                + supervisorId + "\", \"createdAt\": \"2026-11-08T16:00:00Z\"}"))
+                                + supervisorId + "\", \"createdAt\": \"" + baseTime.plusSeconds(18000) + "\"}"))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId).header("Authorization", supervisorToken)
+        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \"2026-11-08T17:00:00Z\"}"))
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \""
+                                + baseTime.plusSeconds(21600) + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resolutionType").value("REPAIRED"));
 
-        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId).header("Authorization", supervisorToken)
+        mockMvc.perform(patch("/api/v1/incidents/{id}/resolve", incidentId)
+                        .header("Authorization", supervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \"2026-11-08T18:00:00Z\"}"))
+                        .content("{\"incidentId\": \"" + incidentId + "\", \"resolutionType\": \"REPAIRED\", \"resolvedAt\": \""
+                                + baseTime.plusSeconds(25200) + "\"}"))
                 .andExpect(status().isConflict());
 
-        mockMvc.perform(get("/api/v1/incidents/{id}", incidentId).header("Authorization", driverToken))
+        mockMvc.perform(get("/api/v1/incidents/{id}", incidentId)
+                        .header("Authorization", driverToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reportedByName").value("Ana Quispe"))
                 .andExpect(jsonPath("$.correctiveActions[0].evidenceUrl").value(STORED_EVIDENCE + "?sig=read"))
