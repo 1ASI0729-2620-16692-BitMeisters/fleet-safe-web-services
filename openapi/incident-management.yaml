@@ -95,12 +95,25 @@ paths:
 
   /incidents:
     get:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: getIncidents
       summary: List the incidents
       description: 'Roles: any authenticated user of the company.'
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: vehicleId
+          in: query
+          required: false
+          description: Filter incidents by vehicle ID.
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          description: Filter incidents by status.
+          schema:
+            $ref: '#/components/schemas/IncidentStatus'
       responses:
         '200':
           description: Incidents with their corrective actions, repairs and follow-ups.
@@ -111,7 +124,7 @@ paths:
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: reportIncident
       summary: Report an incident
       description: >-
@@ -293,6 +306,46 @@ paths:
       responses:
         '200':
           description: Incident resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: './common.yaml#/components/responses/Conflict'
+
+  /incidents/{id}/status:
+    parameters:
+      - $ref: './common.yaml#/components/parameters/Id'
+    patch:
+      tags: [ Incident Management ]
+      operationId: updateIncidentStatus
+      summary: Move an incident to review
+      description: 'Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Only REGISTERED incidents can move to IN_REVIEW.'
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ incidentId, status ]
+              properties:
+                incidentId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [ IN_REVIEW ]
+      responses:
+        '200':
+          description: Incident moved to review.
           content:
             application/json:
               schema:
