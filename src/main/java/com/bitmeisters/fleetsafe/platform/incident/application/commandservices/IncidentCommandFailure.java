@@ -5,7 +5,8 @@ public sealed interface IncidentCommandFailure
         IncidentCommandFailure.UnknownVehicle,
         IncidentCommandFailure.UnknownIncidentType,
         IncidentCommandFailure.UnknownInspection,
-        IncidentCommandFailure.InvalidStatus {
+        IncidentCommandFailure.InvalidStatus,
+        IncidentCommandFailure.InvalidData {
 
     String messageKey();
 
@@ -42,5 +43,8 @@ public sealed interface IncidentCommandFailure
         public String messageKey() {
             return "incident.error.invalid-status";
         }
+    }
+
+    record InvalidData(String messageKey) implements IncidentCommandFailure {
     }
 }

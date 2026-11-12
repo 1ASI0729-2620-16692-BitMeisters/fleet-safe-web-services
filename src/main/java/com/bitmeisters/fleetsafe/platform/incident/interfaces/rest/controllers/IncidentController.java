@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandFailure;
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandService;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentStatusCommand;
 import com.bitmeisters.fleetsafe.platform.incident.application.internal.outboundservices.acl.ExternalIamService;
 import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.bitmeisters.fleetsafe.platform.incident.application.queryservices.IncidentQueryService;
@@ -67,16 +68,28 @@ public class IncidentController {
         this.assembler = new IncidentAssembler(externalIamService::nameOf, fileStorageService::temporaryReadUrl);
     }
 
-    @Operation(summary = "List all incidents")
+    @Operation(summary = "List and filter incidents")
     @GetMapping
-    public ResponseEntity<Map<String, List<IncidentResource>>> getAll() {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsQuery())
-                .stream()
+    public ResponseEntity<Map<String, List<IncidentResource>>> getAll(
+            @RequestParam(required = false) UUID vehicleId,
+            @RequestParam(required = false) IncidentStatus status
+    ) {
+        List<Incident> incidents = vehicleId == null
+                ? queryService.handle(new GetIncidentsQuery())
+                : queryService.handle(
+                new GetIncidentsByVehicleIdQuery(vehicleId));
+
+        if (status != null) {
+            incidents = incidents.stream()
+                    .filter(incident -> incident.getStatus() == status)
+                    .toList();
+        }
+
+        List<IncidentResource> resources = incidents.stream()
                 .map(this::toResource)
                 .toList();
 
-        return ResponseEntity.ok(Map.of("incidents", incidents));
+        return ResponseEntity.ok(Map.of("incidents", resources));
     }
 
     @Operation(summary = "Get an incident")
@@ -190,6 +203,33 @@ public class IncidentController {
     public ResponseEntity<?> resolve(
             @PathVariable UUID id,
             @RequestBody ResolveIncidentCommand command,
+            Locale locale
+    ) {
+        if (!id.equals(command.incidentId())) {
+            return badRequest("incident.error.invalid-id", locale);
+        }
+
+        Result<Incident, IncidentCommandFailure> result =
+                commandService.handle(command);
+
+        if (result.isFailure()) {
+            return commandFailure(
+                    result.failure().orElseThrow(),
+                    locale
+            );
+        }
+
+        return ResponseEntity.ok(
+                toResource(result.success().orElseThrow())
+        );
+    }
+
+    @Operation(summary = "Move an incident to review")
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
+    public ResponseEntity<?> updateStatus(
+            @PathVariable UUID id,
+            @RequestBody UpdateIncidentStatusCommand command,
             Locale locale
     ) {
         if (!id.equals(command.incidentId())) {

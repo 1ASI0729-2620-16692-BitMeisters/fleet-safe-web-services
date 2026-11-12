@@ -10,6 +10,7 @@ import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ReportI
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ResolveIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ScheduleRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentStatusCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.CorrectiveAction;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.IncidentFollowUp;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.Repair;
@@ -22,6 +23,8 @@ public interface IncidentCommandService {
     Result<Incident, IncidentCommandFailure> handle(UpdateIncidentCommand command);
 
     Result<Incident, IncidentCommandFailure> handle(ResolveIncidentCommand command);
+
+    Result<Incident, IncidentCommandFailure> handle(UpdateIncidentStatusCommand command);
 
     Result<Incident, IncidentCommandFailure> handle(DeleteIncidentCommand command);
 

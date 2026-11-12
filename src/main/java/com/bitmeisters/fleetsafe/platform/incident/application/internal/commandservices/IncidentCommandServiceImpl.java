@@ -12,6 +12,7 @@ import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ReportI
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ResolveIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ScheduleRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentStatusCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.CorrectiveAction;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.IncidentFollowUp;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.Repair;
@@ -39,6 +40,7 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
             CorrectiveActionRepository correctiveActionRepository,
             RepairRepository repairRepository,
             IncidentFollowUpRepository incidentFollowUpRepository) {
+
         this.incidentRepository = incidentRepository;
         this.incidentTypeRepository = incidentTypeRepository;
         this.correctiveActionRepository = correctiveActionRepository;
@@ -48,32 +50,72 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
 
     @Override
     @Transactional
-    public Result<Incident, IncidentCommandFailure> handle(ReportIncidentCommand command) {
-        if (!incidentTypeRepository.findById(command.incidentTypeId()).isPresent()) {
-            return Result.failure(new IncidentCommandFailure.UnknownIncidentType());
+    public Result<Incident, IncidentCommandFailure> handle(
+            ReportIncidentCommand command) {
+
+        if (incidentTypeRepository.findById(command.incidentTypeId()).isEmpty()) {
+            return Result.failure(
+                    new IncidentCommandFailure.UnknownIncidentType());
         }
 
-        return Result.success(incidentRepository.save(new Incident(command)));
+        return Result.success(
+                incidentRepository.save(new Incident(command)));
     }
 
     @Override
     @Transactional
-    public Result<Incident, IncidentCommandFailure> handle(UpdateIncidentCommand command) {
-        var incidentOptional = incidentRepository.findById(command.incidentId());
+    public Result<Incident, IncidentCommandFailure> handle(
+            UpdateIncidentStatusCommand command) {
+
+        var incidentOptional =
+                incidentRepository.findById(command.incidentId());
+
+        if (incidentOptional.isEmpty()) {
+            return Result.failure(
+                    new IncidentCommandFailure.NotFound());
+        }
+
+        var incident = incidentOptional.get();
+
+        try {
+            incident.startReview();
+        } catch (IllegalStateException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidStatus());
+        }
+
+        return Result.success(
+                incidentRepository.save(incident));
+    }
+
+    @Override
+    @Transactional
+    public Result<Incident, IncidentCommandFailure> handle(
+            UpdateIncidentCommand command) {
+
+        var incidentOptional =
+                incidentRepository.findById(command.incidentId());
 
         if (incidentOptional.isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
         }
 
-        if (!incidentTypeRepository.findById(command.incidentTypeId()).isPresent()) {
-            return Result.failure(new IncidentCommandFailure.UnknownIncidentType());
+        if (incidentTypeRepository.findById(command.incidentTypeId()).isEmpty()) {
+            return Result.failure(
+                    new IncidentCommandFailure.UnknownIncidentType());
         }
 
         var incident = incidentOptional.get();
+
         try {
             incident.update(command);
         } catch (IllegalStateException exception) {
-            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidStatus());
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidData(
+                            exception.getMessage()));
         }
 
         return Result.success(incidentRepository.save(incident));
@@ -81,18 +123,31 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
 
     @Override
     @Transactional
-    public Result<Incident, IncidentCommandFailure> handle(ResolveIncidentCommand command) {
-        var incidentOptional = incidentRepository.findById(command.incidentId());
+    public Result<Incident, IncidentCommandFailure> handle(
+            ResolveIncidentCommand command) {
+
+        var incidentOptional =
+                incidentRepository.findById(command.incidentId());
 
         if (incidentOptional.isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
         }
 
         var incident = incidentOptional.get();
+
         try {
-            incident.resolve(command.resolutionType(), command.resolvedAt());
+            incident.resolve(
+                    command.resolutionType(),
+                    command.resolvedAt());
+
         } catch (IllegalStateException exception) {
-            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidStatus());
+
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidData(
+                            exception.getMessage()));
         }
 
         return Result.success(incidentRepository.save(incident));
@@ -100,8 +155,11 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
 
     @Override
     @Transactional
-    public Result<Incident, IncidentCommandFailure> handle(DeleteIncidentCommand command) {
-        var incidentOptional = incidentRepository.findById(command.incidentId());
+    public Result<Incident, IncidentCommandFailure> handle(
+            DeleteIncidentCommand command) {
+
+        var incidentOptional =
+                incidentRepository.findById(command.incidentId());
 
         if (incidentOptional.isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
@@ -116,19 +174,40 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
     @Transactional
     public Result<CorrectiveAction, IncidentCommandFailure> handle(
             RegisterCorrectiveActionCommand command) {
-        if (incidentRepository.findById(command.incidentId()).isEmpty()) {
-            return Result.failure(new IncidentCommandFailure.NotFound());
+
+        var incidentOptional =
+                incidentRepository.findById(command.incidentId());
+
+        if (incidentOptional.isEmpty()) {
+            return Result.failure(
+                    new IncidentCommandFailure.NotFound());
+        }
+
+        var incident = incidentOptional.get();
+
+        try {
+            incident.assertCanRegisterCorrectiveAction();
+        } catch (IllegalStateException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidStatus());
         }
 
         return Result.success(
-                correctiveActionRepository.save(new CorrectiveAction(command)));
+                correctiveActionRepository.save(
+                        new CorrectiveAction(command)));
     }
 
     @Override
     @Transactional
-    public Result<CorrectiveAction, IncidentCommandFailure> handle(AttachCorrectiveActionEvidenceCommand command) {
-        var actionOptional = correctiveActionRepository.findById(command.correctiveActionId())
-                .filter(action -> action.getIncidentId().equals(command.incidentId()));
+    public Result<CorrectiveAction, IncidentCommandFailure> handle(
+            AttachCorrectiveActionEvidenceCommand command) {
+
+        var actionOptional =
+                correctiveActionRepository.findById(
+                                command.correctiveActionId())
+                        .filter(action ->
+                                action.getIncidentId().equals(
+                                        command.incidentId()));
 
         if (actionOptional.isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
@@ -137,52 +216,69 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
         var action = actionOptional.get();
         action.attachEvidence(command.evidenceUrl());
 
-        return Result.success(correctiveActionRepository.save(action));
+        return Result.success(
+                correctiveActionRepository.save(action));
     }
 
     @Override
     @Transactional
-    public Result<Repair, IncidentCommandFailure> handle(ScheduleRepairCommand command) {
+    public Result<Repair, IncidentCommandFailure> handle(
+            ScheduleRepairCommand command) {
+
         if (incidentRepository.findById(command.incidentId()).isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
         }
 
-        return Result.success(repairRepository.save(new Repair(command)));
+        return Result.success(
+                repairRepository.save(new Repair(command)));
     }
 
     @Override
     @Transactional
-    public Result<Repair, IncidentCommandFailure> handle(CompleteRepairCommand command) {
-        var repairOptional = repairRepository.findById(command.repairId());
+    public Result<Repair, IncidentCommandFailure> handle(
+            CompleteRepairCommand command) {
+
+        var repairOptional =
+                repairRepository.findById(command.repairId());
 
         if (repairOptional.isEmpty()) {
-            return Result.failure(new IncidentCommandFailure.NotFound());
+            return Result.failure(
+                    new IncidentCommandFailure.NotFound());
         }
 
         var repair = repairOptional.get();
 
         if (!repair.getIncidentId().equals(command.incidentId())) {
-            return Result.failure(new IncidentCommandFailure.NotFound());
+            return Result.failure(
+                    new IncidentCommandFailure.NotFound());
         }
 
         try {
             repair.complete(command.finishedAt());
         } catch (IllegalStateException exception) {
-            return Result.failure(new IncidentCommandFailure.InvalidStatus());
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidStatus());
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidData(
+                            exception.getMessage()));
         }
 
-        return Result.success(repairRepository.save(repair));
+        return Result.success(
+                repairRepository.save(repair));
     }
 
     @Override
     @Transactional
     public Result<IncidentFollowUp, IncidentCommandFailure> handle(
             AddIncidentFollowUpCommand command) {
+
         if (incidentRepository.findById(command.incidentId()).isEmpty()) {
             return Result.failure(new IncidentCommandFailure.NotFound());
         }
 
         return Result.success(
-                incidentFollowUpRepository.save(new IncidentFollowUp(command)));
+                incidentFollowUpRepository.save(
+                        new IncidentFollowUp(command)));
     }
 }
