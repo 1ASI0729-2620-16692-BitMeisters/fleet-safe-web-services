@@ -11,12 +11,11 @@ import com.bitmeisters.fleetsafe.platform.incident.application.queryservices.Inc
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.aggregates.Incident;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ReportIncidentCommand;
-import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ResolveIncidentCommand;
+import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.UpdateIncidentStatusResource;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetCorrectiveActionsByIncidentIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentByIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentFollowUpsQuery;
-import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsByStatusQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsByVehicleIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetRepairsByIncidentIdQuery;
@@ -104,48 +103,6 @@ public class IncidentController {
                 .orElseGet(() -> notFound("incident.error.not-found", locale));
     }
 
-    @Operation(summary = "List incidents of a vehicle")
-    @GetMapping("/vehicle/{vehicleId}")
-    public ResponseEntity<Map<String, List<IncidentResource>>> getByVehicle(
-            @PathVariable UUID vehicleId
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByVehicleIdQuery(vehicleId))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
-    }
-
-    @Operation(summary = "List incidents by status")
-    @GetMapping("/status/{status}")
-    public ResponseEntity<Map<String, List<IncidentResource>>> getByStatus(
-            @PathVariable IncidentStatus status
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByStatusQuery(status))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
-    }
-
-    @Operation(summary = "Search incidents")
-    @GetMapping("/search")
-    public ResponseEntity<Map<String, List<IncidentResource>>> search(
-            @RequestParam UUID vehicleId
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByVehicleIdQuery(vehicleId))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
-    }
-
     @Operation(summary = "Report an incident")
     @PostMapping
     @PreAuthorize("hasAnyRole('DRIVER', 'FLEET_SUPERVISOR', 'ADMINISTRATOR')")
@@ -197,43 +154,25 @@ public class IncidentController {
         );
     }
 
-    @Operation(summary = "Resolve an incident")
-    @PatchMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
-    public ResponseEntity<?> resolve(
-            @PathVariable UUID id,
-            @RequestBody ResolveIncidentCommand command,
-            Locale locale
-    ) {
-        if (!id.equals(command.incidentId())) {
-            return badRequest("incident.error.invalid-id", locale);
-        }
-
-        Result<Incident, IncidentCommandFailure> result =
-                commandService.handle(command);
-
-        if (result.isFailure()) {
-            return commandFailure(
-                    result.failure().orElseThrow(),
-                    locale
-            );
-        }
-
-        return ResponseEntity.ok(
-                toResource(result.success().orElseThrow())
-        );
-    }
-
-    @Operation(summary = "Move an incident to review")
-    @PatchMapping("/{id}/status")
+    @Operation(summary = "Update incident status or resolve an incident")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> updateStatus(
             @PathVariable UUID id,
-            @RequestBody UpdateIncidentStatusCommand command,
+            @RequestBody UpdateIncidentStatusResource resource,
             Locale locale
     ) {
-        if (!id.equals(command.incidentId())) {
-            return badRequest("incident.error.invalid-id", locale);
+        UpdateIncidentStatusCommand command;
+
+        try {
+            command = new UpdateIncidentStatusCommand(
+                    id,
+                    resource.status(),
+                    resource.resolutionType(),
+                    resource.resolvedAt()
+            );
+        } catch (IllegalArgumentException exception) {
+            return badRequest(exception.getMessage(), locale);
         }
 
         Result<Incident, IncidentCommandFailure> result =
