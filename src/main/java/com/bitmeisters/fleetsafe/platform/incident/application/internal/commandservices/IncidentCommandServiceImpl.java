@@ -9,7 +9,7 @@ import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.Complet
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.RegisterCorrectiveActionCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ReportIncidentCommand;
-import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ResolveIncidentCommand;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.valueobjects.IncidentStatus;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ScheduleRepairCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentStatusCommand;
@@ -78,10 +78,22 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
         var incident = incidentOptional.get();
 
         try {
-            incident.startReview();
+            if (command.status() == IncidentStatus.IN_REVIEW) {
+                incident.startReview();
+            } else if (command.status() == IncidentStatus.RESOLVED) {
+                incident.resolve(
+                        command.resolutionType(),
+                        command.resolvedAt());
+            }
+
         } catch (IllegalStateException exception) {
             return Result.failure(
                     new IncidentCommandFailure.InvalidStatus());
+
+        } catch (IllegalArgumentException exception) {
+            return Result.failure(
+                    new IncidentCommandFailure.InvalidData(
+                            exception.getMessage()));
         }
 
         return Result.success(
@@ -112,38 +124,6 @@ public class IncidentCommandServiceImpl implements IncidentCommandService {
         } catch (IllegalStateException exception) {
             return Result.failure(
                     new IncidentCommandFailure.InvalidStatus());
-        } catch (IllegalArgumentException exception) {
-            return Result.failure(
-                    new IncidentCommandFailure.InvalidData(
-                            exception.getMessage()));
-        }
-
-        return Result.success(incidentRepository.save(incident));
-    }
-
-    @Override
-    @Transactional
-    public Result<Incident, IncidentCommandFailure> handle(
-            ResolveIncidentCommand command) {
-
-        var incidentOptional =
-                incidentRepository.findById(command.incidentId());
-
-        if (incidentOptional.isEmpty()) {
-            return Result.failure(new IncidentCommandFailure.NotFound());
-        }
-
-        var incident = incidentOptional.get();
-
-        try {
-            incident.resolve(
-                    command.resolutionType(),
-                    command.resolvedAt());
-
-        } catch (IllegalStateException exception) {
-            return Result.failure(
-                    new IncidentCommandFailure.InvalidStatus());
-
         } catch (IllegalArgumentException exception) {
             return Result.failure(
                     new IncidentCommandFailure.InvalidData(
