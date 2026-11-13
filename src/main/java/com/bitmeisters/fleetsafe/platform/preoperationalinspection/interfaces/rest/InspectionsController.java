@@ -169,10 +169,10 @@ public class InspectionsController {
             description = "Roles: the DRIVER who performed the inspection, while it is IN_PROGRESS. JPEG or PNG, up to 5 MB, with the observation it documents.")
     public ResponseEntity<?> attachEvidence(@PathVariable UUID id, @RequestParam UUID observationId,
                                             @RequestPart("file") MultipartFile file, Authentication authentication) throws IOException {
-        var inspection = accessibleInspection(id, authentication, true);
-        if (inspection.isEmpty()) return deniedOrMissing(id);
+        var accessible = accessibleInspection(id, authentication, true);
+        if (accessible.isEmpty()) return deniedOrMissing(id);
         var observation = new ObservationId(observationId);
-        var owner = inspection.get().getResults().stream()
+        var owner = accessible.get().getResults().stream()
                 .filter(result -> result.getObservations().stream().anyMatch(candidate -> observation.equals(candidate.getId())))
                 .findFirst();
         if (owner.isEmpty()) return toProblem(HttpStatus.NOT_FOUND, "inspection.error.observation-not-found", messageSource);
