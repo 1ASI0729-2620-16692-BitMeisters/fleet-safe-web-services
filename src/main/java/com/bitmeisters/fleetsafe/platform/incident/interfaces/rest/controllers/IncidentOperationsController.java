@@ -14,6 +14,8 @@ import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.Schedul
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.CorrectiveAction;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.IncidentFollowUp;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.entities.Repair;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.valueobjects.RepairStatus;
+import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.UpdateRepairResource;
 import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.assemblers.CorrectiveActionAssembler;
 import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.assemblers.IncidentFollowUpAssembler;
 import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.assemblers.RepairAssembler;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -91,13 +94,13 @@ public class IncidentOperationsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(resource);
     }
 
-    @Operation(summary = "Attach the evidence file of a corrective action")
-    @PostMapping(value = "/{incidentId}/corrective-actions/{correctiveActionId}/evidence",
+    @Operation(summary = "Attach evidence to a corrective action")
+    @PostMapping(value = "/{incidentId}/evidences",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> attachCorrectiveActionEvidence(
             @PathVariable UUID incidentId,
-            @PathVariable UUID correctiveActionId,
+            @RequestParam("correctiveActionId") UUID correctiveActionId,
             @RequestPart("file") MultipartFile file) throws IOException {
 
         if (!FileStorageService.SUPPORTED_CONTENT_TYPES.contains(file.getContentType())) {
@@ -105,18 +108,25 @@ public class IncidentOperationsController {
         }
 
         var evidenceUrl = fileStorageService.store(file.getContentType(), file.getBytes());
+
         if (evidenceUrl.isEmpty()) {
             return problem(HttpStatus.SERVICE_UNAVAILABLE, "incident.corrective-action.error.evidence-unavailable");
         }
 
-        Result<CorrectiveAction, IncidentCommandFailure> result = commandService.handle(
-                new AttachCorrectiveActionEvidenceCommand(incidentId, correctiveActionId, evidenceUrl.get()));
+        Result<CorrectiveAction, IncidentCommandFailure> result =
+                commandService.handle(
+                        new AttachCorrectiveActionEvidenceCommand(
+                                incidentId,
+                                correctiveActionId,
+                                evidenceUrl.get()));
 
         if (result.isFailure()) {
             return failureResponse(result.failure().orElseThrow());
         }
 
-        return ResponseEntity.ok(correctiveActionAssembler.toResourceFromEntity(result.success().orElseThrow()));
+        return ResponseEntity.ok(
+                correctiveActionAssembler.toResourceFromEntity(
+                        result.success().orElseThrow()));
     }
 
     @Operation(summary = "Register a repair")
@@ -144,18 +154,31 @@ public class IncidentOperationsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(resource);
     }
 
-    @Operation(summary = "Mark a repair as completed")
-    @PatchMapping("/{incidentId}/repairs/{repairId}/complete")
+    @Operation(summary = "Update a repair")
+    @PatchMapping("/{incidentId}/repairs/{repairId}")
     @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
     public ResponseEntity<?> completeRepair(
             @PathVariable UUID incidentId,
             @PathVariable UUID repairId,
-            @RequestBody CompleteRepairCommand command) {
+            @RequestBody UpdateRepairResource resource) {
 
-        if (!incidentId.equals(command.incidentId())
-                || !repairId.equals(command.repairId())) {
-            return invalidIdentifierResponse();
+        if (resource.status() != RepairStatus.COMPLETED) {
+            return problem(
+                    HttpStatus.BAD_REQUEST,
+                    "incident.repair.error.invalid-status");
         }
+
+        if (resource.finishedAt() == null) {
+            return problem(
+                    HttpStatus.BAD_REQUEST,
+                    "incident.repair.error.finished-at.required");
+        }
+
+        CompleteRepairCommand command =
+                new CompleteRepairCommand(
+                        incidentId,
+                        repairId,
+                        resource.finishedAt());
 
         Result<Repair, IncidentCommandFailure> result =
                 commandService.handle(command);
@@ -164,11 +187,11 @@ public class IncidentOperationsController {
             return failureResponse(result.failure().orElseThrow());
         }
 
-        RepairResource resource =
+        RepairResource repairResource =
                 repairAssembler.toResourceFromEntity(
                         result.success().orElseThrow());
 
-        return ResponseEntity.ok(resource);
+        return ResponseEntity.ok(repairResource);
     }
 
     @Operation(summary = "Register an incident follow-up")
