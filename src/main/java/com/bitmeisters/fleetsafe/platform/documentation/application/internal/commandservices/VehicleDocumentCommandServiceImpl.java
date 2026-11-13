@@ -65,10 +65,9 @@ public class VehicleDocumentCommandServiceImpl implements VehicleDocumentCommand
 
     @Override
     public Result<VehicleDocument, VehicleDocumentCommandFailure> handle(AttachVehicleDocumentFileCommand command) {
-        var vehicleDocument = vehicleDocumentRepository.findById(command.vehicleDocumentId())
-                .filter(document -> document.belongsTo(command.vehicleId()));
+        var vehicleDocument = vehicleDocumentRepository.findById(command.vehicleDocumentId());
         if (vehicleDocument.isEmpty()) {
-            log.warn("Vehicle document not found: id={}, vehicleId={}", command.vehicleDocumentId(), command.vehicleId().value());
+            log.warn("Vehicle document not found: id={}", command.vehicleDocumentId());
             return Result.failure(new VehicleDocumentCommandFailure.NotFound());
         }
         vehicleDocument.get().attachFile(command.fileUrl());

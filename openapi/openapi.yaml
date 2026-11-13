@@ -58,6 +58,8 @@ paths:
     $ref: './evaluation-and-authorization.yaml#/paths/~1authorizations'
   /block-lifts:
     $ref: './evaluation-and-authorization.yaml#/paths/~1block-lifts'
+  /documents/{id}/files:
+    $ref: './vehicle-documentation.yaml#/paths/~1documents~1{id}~1files'
   /evaluation-rules:
     $ref: './evaluation-and-authorization.yaml#/paths/~1evaluation-rules'
   /evaluation-rules/{id}:
@@ -68,12 +70,8 @@ paths:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents'
   /vehicles/{vehicleId}/documents/{documentId}:
     $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}'
-  /vehicles/{vehicleId}/documents/{documentId}/file:
-    $ref: './vehicle-documentation.yaml#/paths/~1vehicles~1{vehicleId}~1documents~1{documentId}~1file'
   /documents:
     $ref: './vehicle-documentation.yaml#/paths/~1documents'
-  /documents/expiring:
-    $ref: './vehicle-documentation.yaml#/paths/~1documents~1expiring'
   /incident-types:
     $ref: './incident-management.yaml#/paths/~1incident-types'
   /incident-types/{id}:
