@@ -7,6 +7,7 @@ import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.queries.GetAct
 import com.bitmeisters.fleetsafe.platform.evaluation.domain.model.queries.GetEvaluationRuleByIdQuery;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.resources.DefineEvaluationRuleResource;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.resources.EvaluationRuleResource;
+import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.resources.UpdateEvaluationRuleResource;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.transform.DefineEvaluationRuleCommandFromResourceAssembler;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.transform.ResponseEntityFromEvaluationRuleCommandResultAssembler;
 import com.bitmeisters.fleetsafe.platform.evaluation.interfaces.rest.transform.ResponseEntityFromEvaluationRuleQueryResultAssembler;
@@ -24,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -85,14 +87,14 @@ public class EvaluationRulesController {
                 .orElseGet(() -> ResponseEntityFromEvaluationRuleQueryResultAssembler.notFound(messageSource, "evaluation.rule.error.not-found"));
     }
 
-    @PostMapping("/{id}/deactivation")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Deactivate an evaluation rule", description = "Roles: ADMINISTRATOR. Deactivated rules are no longer applied.")
+    @Operation(summary = "Deactivate an evaluation rule", description = "Roles: ADMINISTRATOR. Send isActive false; deactivated rules are no longer applied.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rule deactivated", content = @Content(schema = @Schema(implementation = EvaluationRuleResource.class))),
             @ApiResponse(responseCode = "404", description = "Rule not found"),
             @ApiResponse(responseCode = "409", description = "The rule is already inactive")})
-    public ResponseEntity<?> deactivateEvaluationRule(@PathVariable UUID id) {
+    public ResponseEntity<?> deactivateEvaluationRule(@PathVariable UUID id, @Valid @RequestBody UpdateEvaluationRuleResource resource) {
         var result = evaluationRuleCommandService.handle(new DeactivateEvaluationRuleCommand(id));
         return ResponseEntityFromEvaluationRuleCommandResultAssembler.toResponseEntityFromResult(result, messageSource, HttpStatus.OK);
     }

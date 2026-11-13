@@ -89,11 +89,11 @@ class OperationalAuthorizationsControllerIntegrationTest {
 
     @Test
     void listsOnlyTheLatestAuthorizationOfEachVehicle() throws Exception {
-        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", supervisorToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Urgent delivery\"}"))
+        mockMvc.perform(post("/api/v1/block-lifts").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"vehicleId\": \"" + blockedVehicle + "\", \"reason\": \"Urgent delivery\"}"))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken))
+        mockMvc.perform(get("/api/v1/operational-statuses").header("Authorization", supervisorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.vehicleId == '%s')]", blockedVehicle).value(hasSize(1)))
                 .andExpect(jsonPath("$[?(@.vehicleId == '%s')].status", blockedVehicle).value(contains("ENABLED")));
@@ -101,86 +101,86 @@ class OperationalAuthorizationsControllerIntegrationTest {
 
     @Test
     void filtersTheCurrentAuthorizationsByStatus() throws Exception {
-        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+        mockMvc.perform(get("/api/v1/operational-statuses").header("Authorization", supervisorToken)
                         .param("status", "NOT_ENABLED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].vehicleId").value(hasItem(blockedVehicle.toString())))
                 .andExpect(jsonPath("$[*].status").value(everyItem(is("NOT_ENABLED"))));
 
-        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+        mockMvc.perform(get("/api/v1/operational-statuses").header("Authorization", supervisorToken)
                         .param("status", "ENABLED"))
                 .andExpect(jsonPath("$[*].vehicleId").value(not(hasItem(blockedVehicle.toString()))));
     }
 
     @Test
     void rejectsAnUnknownStatus() throws Exception {
-        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", supervisorToken)
+        mockMvc.perform(get("/api/v1/operational-statuses").header("Authorization", supervisorToken)
                         .param("status", "BROKEN"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void aDriverCannotListTheStatusOfEveryVehicle() throws Exception {
-        mockMvc.perform(get("/api/v1/operational-authorizations/current").header("Authorization", driverToken))
+        mockMvc.perform(get("/api/v1/operational-statuses").header("Authorization", driverToken))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void anyAuthenticatedUserSeesTheStatusOfAVehicle() throws Exception {
-        mockMvc.perform(get("/api/v1/vehicles/{id}/status", blockedVehicle).header("Authorization", driverToken))
+        mockMvc.perform(get("/api/v1/operational-statuses/{vehicleId}", blockedVehicle).header("Authorization", driverToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("NOT_ENABLED"));
     }
 
     @Test
     void reportsAVehicleWithoutAuthorization() throws Exception {
-        mockMvc.perform(get("/api/v1/vehicles/{id}/status", UUID.randomUUID()).header("Authorization", driverToken))
+        mockMvc.perform(get("/api/v1/operational-statuses/{vehicleId}", UUID.randomUUID()).header("Authorization", driverToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("The vehicle has no operational authorization yet."));
     }
 
     @Test
     void aSupervisorLiftsTheBlockAndIsRecordedAsResponsible() throws Exception {
-        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", supervisorToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Urgent delivery\"}"))
+        mockMvc.perform(post("/api/v1/block-lifts").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"vehicleId\": \"" + blockedVehicle + "\", \"reason\": \"Urgent delivery\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("ENABLED"))
                 .andExpect(jsonPath("$.isOverride").value(true))
                 .andExpect(jsonPath("$.overrideReason").value("Urgent delivery"))
                 .andExpect(jsonPath("$.authorizedBy").value(supervisor.getId().toString()));
 
-        mockMvc.perform(get("/api/v1/vehicles/{id}/authorizations", blockedVehicle).header("Authorization", supervisorToken))
+        mockMvc.perform(get("/api/v1/authorizations").header("Authorization", supervisorToken).param("vehicleId", blockedVehicle.toString()))
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].isOverride").value(true));
 
         var now = Instant.now();
-        mockMvc.perform(get("/api/v1/operational-authorizations/overrides").header("Authorization", supervisorToken)
+        mockMvc.perform(get("/api/v1/block-lifts").header("Authorization", supervisorToken)
                         .param("from", now.minus(1, ChronoUnit.HOURS).toString()).param("to", now.plus(1, ChronoUnit.HOURS).toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].vehicleId").value(hasItem(blockedVehicle.toString())));
 
-        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", supervisorToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"Again\"}"))
+        mockMvc.perform(post("/api/v1/block-lifts").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"vehicleId\": \"" + blockedVehicle + "\", \"reason\": \"Again\"}"))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void aDriverCannotLiftABlock() throws Exception {
-        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", driverToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \"I need to leave\"}"))
+        mockMvc.perform(post("/api/v1/block-lifts").header("Authorization", driverToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"vehicleId\": \"" + blockedVehicle + "\", \"reason\": \"I need to leave\"}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void requiresAReasonToLiftABlock() throws Exception {
-        mockMvc.perform(post("/api/v1/vehicles/{id}/block-lifts", blockedVehicle).header("Authorization", supervisorToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\": \" \"}"))
+        mockMvc.perform(post("/api/v1/block-lifts").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"vehicleId\": \"" + blockedVehicle + "\", \"reason\": \" \"}"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void rejectsAPeriodThatEndsBeforeItStarts() throws Exception {
-        mockMvc.perform(get("/api/v1/operational-authorizations/overrides").header("Authorization", supervisorToken)
+        mockMvc.perform(get("/api/v1/block-lifts").header("Authorization", supervisorToken)
                         .param("from", "2026-10-31T00:00:00Z").param("to", "2026-10-01T00:00:00Z"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("The start of the period must be before its end."));

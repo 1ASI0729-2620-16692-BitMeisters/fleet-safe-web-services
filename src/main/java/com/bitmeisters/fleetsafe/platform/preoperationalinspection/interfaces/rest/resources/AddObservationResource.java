@@ -2,10 +2,16 @@ package com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.r
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import java.util.UUID;
 
 @Schema(description = "Request resource used to add an observation to a result.")
 public record AddObservationResource(
+        @Schema(description = "Result the observation belongs to", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotNull(message = "{inspection.observation.error.result-id.required}")
+        UUID resultId,
         @Schema(description = "What was found", example = "The left brake light does not turn on.", maxLength = 1000, requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank(message = "{inspection.observation.error.description.required}")
         @Size(max = 1000, message = "{inspection.observation.error.description.size}")

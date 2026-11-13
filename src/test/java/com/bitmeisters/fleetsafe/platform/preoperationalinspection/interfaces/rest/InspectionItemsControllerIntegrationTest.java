@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -114,15 +115,15 @@ class InspectionItemsControllerIntegrationTest {
                 .andExpect(jsonPath("$.isSafetyComponent").value(false))
                 .andExpect(jsonPath("$.displayOrder").value(3));
 
-        // Deactivate item
-        mockMvc.perform(post("/api/v1/inspection-items/{id}/deactivation", id)
-                        .header("Authorization", administrator))
+        mockMvc.perform(patch("/api/v1/inspection-items/{id}", id)
+                        .header("Authorization", administrator)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"isActive\": false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isActive").value(false));
 
-        // Conflict when deactivating again
-        mockMvc.perform(post("/api/v1/inspection-items/{id}/deactivation", id)
-                        .header("Authorization", administrator))
+        mockMvc.perform(patch("/api/v1/inspection-items/{id}", id)
+                        .header("Authorization", administrator)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"isActive\": false}"))
                 .andExpect(status().isConflict());
     }
 

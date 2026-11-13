@@ -232,10 +232,9 @@ paths:
         '409':
           $ref: './common.yaml#/components/responses/Conflict'
 
-  /inspections/{id}/results/{resultId}/observations:
+  /inspections/{id}/observations:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
-      - $ref: '#/components/parameters/ResultId'
     post:
       tags: [Pre-Operational Inspection]
       operationId: addObservation
@@ -273,11 +272,9 @@ paths:
         '409':
           $ref: './common.yaml#/components/responses/Conflict'
 
-  /inspections/{id}/results/{resultId}/observations/{observationId}/evidences:
+  /inspections/{id}/evidences:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
-      - $ref: '#/components/parameters/ResultId'
-      - $ref: '#/components/parameters/ObservationId'
     post:
       tags: [Pre-Operational Inspection]
       operationId: attachEvidence
@@ -288,6 +285,13 @@ paths:
         the client never depends on the provider. Accepted formats: JPEG and PNG, up to 5 MB.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: observationId
+          in: query
+          required: true
+          description: Observation the photo documents.
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -442,8 +446,11 @@ components:
 
     AddObservationResource:
       type: object
-      required: [description]
+      required: [resultId, description]
       properties:
+        resultId:
+          type: string
+          format: uuid
         description:
           type: string
           minLength: 1

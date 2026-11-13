@@ -140,13 +140,13 @@ class VehicleDocumentsControllerIntegrationTest {
         var valid = registerDocument(soat, "SOAT-VALID", today.plusDays(90));
         var expired = registerDocument(soat, "SOAT-EXPIRED", today.minusDays(1));
 
-        mockMvc.perform(get("/api/v1/documents/expiring").header("Authorization", supervisor))
+        mockMvc.perform(get("/api/v1/documents").param("expiresWithinDays", "30").header("Authorization", supervisor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].id").value(hasItem(expiring)))
                 .andExpect(jsonPath("$[*].id").value(not(hasItem(valid))))
                 .andExpect(jsonPath("$[*].id").value(not(hasItem(expired))));
 
-        mockMvc.perform(get("/api/v1/documents/expiring").param("days", "120").header("Authorization", supervisor))
+        mockMvc.perform(get("/api/v1/documents").param("expiresWithinDays", "120").header("Authorization", supervisor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].id").value(hasItem(valid)));
 
@@ -183,7 +183,7 @@ class VehicleDocumentsControllerIntegrationTest {
                                 {"code": "TP", "name": "Technical inspection", "isRequired": true}
                                 """))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/v1/documents/expiring").header("Authorization", driver))
+        mockMvc.perform(get("/api/v1/documents").header("Authorization", driver))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/document-types").header("Authorization", driver))
                 .andExpect(status().isOk());
@@ -223,7 +223,7 @@ class VehicleDocumentsControllerIntegrationTest {
 
     @Test
     void rejectsAnExpiringWindowLongerThanAYear() throws Exception {
-        mockMvc.perform(get("/api/v1/documents/expiring").param("days", "400").header("Authorization", supervisor))
+        mockMvc.perform(get("/api/v1/documents").param("expiresWithinDays", "400").header("Authorization", supervisor))
                 .andExpect(status().isBadRequest());
     }
 
@@ -232,7 +232,7 @@ class VehicleDocumentsControllerIntegrationTest {
         var soat = registerDocumentType(uniqueCode());
         var documentId = registerDocument(soat, "SOAT-2026-007001", today.plusYears(1));
 
-        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+        mockMvc.perform(multipart("/api/v1/documents/{id}/files", documentId)
                         .file(new MockMultipartFile("file", "soat.pdf", "application/pdf", new byte[] {1, 2, 3}))
                         .header("Authorization", supervisor))
                 .andExpect(status().isOk())
@@ -249,7 +249,7 @@ class VehicleDocumentsControllerIntegrationTest {
     void rejectsADocumentFileThatIsNotAnImageOrPdf() throws Exception {
         var documentId = registerDocument(registerDocumentType(uniqueCode()), "SOAT-2026-007003", today.plusYears(1));
 
-        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+        mockMvc.perform(multipart("/api/v1/documents/{id}/files", documentId)
                         .file(new MockMultipartFile("file", "soat.txt", "text/plain", new byte[] {1}))
                         .header("Authorization", supervisor).header("Accept-Language", "es-419"))
                 .andExpect(status().isBadRequest())
@@ -261,7 +261,7 @@ class VehicleDocumentsControllerIntegrationTest {
         var documentId = registerDocument(registerDocumentType(uniqueCode()), "SOAT-2026-007004", today.plusYears(1));
         when(fileStorageService.store(eq("image/png"), any())).thenReturn(Optional.empty());
 
-        mockMvc.perform(multipart("/api/v1/vehicles/{vehicleId}/documents/{documentId}/file", truck, documentId)
+        mockMvc.perform(multipart("/api/v1/documents/{id}/files", documentId)
                         .file(new MockMultipartFile("file", "soat.png", "image/png", new byte[] {1}))
                         .header("Authorization", supervisor))
                 .andExpect(status().isServiceUnavailable());

@@ -146,13 +146,14 @@ public class InspectionsController {
                 inspection -> resultResource(findResult(inspection, resultId)), messageSource, HttpStatus.OK);
     }
 
-    @PostMapping("/{id}/results/{resultId}/observations")
+    @PostMapping("/{id}/observations")
     @PreAuthorize("hasAnyRole('DRIVER', 'FLEET_SUPERVISOR')")
     @Operation(summary = "Add an observation to a result",
             description = "Roles: the DRIVER who performed the inspection, or a FLEET_SUPERVISOR, while it is IN_PROGRESS.")
-    public ResponseEntity<?> addObservation(@PathVariable UUID id, @PathVariable UUID resultId,
-                                            @Valid @RequestBody AddObservationResource resource, Authentication authentication) {
+    public ResponseEntity<?> addObservation(@PathVariable UUID id, @Valid @RequestBody AddObservationResource resource,
+                                            Authentication authentication) {
         if (accessibleInspection(id, authentication, true).isEmpty()) return deniedOrMissing(id);
+        var resultId = resource.resultId();
         var command = new AddObservationCommand(new InspectionId(id), new InspectionResultId(resultId),
                 new ObservationDescription(resource.description()), userId(authentication));
         return toResponseEntityFromResult(inspectionCommandService.handle(command),
@@ -161,14 +162,21 @@ public class InspectionsController {
                 messageSource, HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/{id}/results/{resultId}/observations/{observationId}/evidences",
+    @PostMapping(value = "/{id}/evidences",
             consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DRIVER')")
     @Operation(summary = "Attach a photo as evidence of an observation",
-            description = "Roles: the DRIVER who performed the inspection, while it is IN_PROGRESS. JPEG or PNG, up to 5 MB.")
-    public ResponseEntity<?> attachEvidence(@PathVariable UUID id, @PathVariable UUID resultId, @PathVariable UUID observationId,
+            description = "Roles: the DRIVER who performed the inspection, while it is IN_PROGRESS. JPEG or PNG, up to 5 MB, with the observation it documents.")
+    public ResponseEntity<?> attachEvidence(@PathVariable UUID id, @RequestParam UUID observationId,
                                             @RequestPart("file") MultipartFile file, Authentication authentication) throws IOException {
-        if (accessibleInspection(id, authentication, true).isEmpty()) return deniedOrMissing(id);
+        var accessible = accessibleInspection(id, authentication, true);
+        if (accessible.isEmpty()) return deniedOrMissing(id);
+        var observation = new ObservationId(observationId);
+        var owner = accessible.get().getResults().stream()
+                .filter(result -> result.getObservations().stream().anyMatch(candidate -> observation.equals(candidate.getId())))
+                .findFirst();
+        if (owner.isEmpty()) return toProblem(HttpStatus.NOT_FOUND, "inspection.error.observation-not-found", messageSource);
+        var resultId = owner.get().getId().value();
         var mediaType = MediaType.fromString(String.valueOf(file.getContentType()));
         var fileUrl = evidenceStorageService.store(mediaType.getValue(), file.getBytes());
         if (fileUrl.isEmpty()) return toProblem(HttpStatus.SERVICE_UNAVAILABLE, "inspection.evidence.error.storage-unavailable", messageSource);

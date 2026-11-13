@@ -90,9 +90,10 @@ class InspectionEvaluationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"inspectionItemId\": \"" + brakesItemId + "\", \"result\": \"FAIL\"}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String resultId = JsonPath.read(result, "$.id");
-        mockMvc.perform(post("/api/v1/inspections/{id}/results/{resultId}/observations", inspectionId, resultId)
+        mockMvc.perform(post("/api/v1/inspections/{id}/observations", inspectionId)
                         .header("Authorization", driverToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"description\": \"The brakes do not respond.\"}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resultId\": \"" + resultId + "\", \"description\": \"The brakes do not respond.\"}"))
                 .andExpect(status().isCreated());
         mockMvc.perform(patch("/api/v1/inspections/{id}", inspectionId).header("Authorization", driverToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\": \"COMPLETED\"}"))
@@ -104,7 +105,7 @@ class InspectionEvaluationFlowIntegrationTest {
     void aCompletedInspectionIsEvaluatedAndBlocksTheVehicle() throws Exception {
         completeAnInspectionWithFailedBrakes();
 
-        mockMvc.perform(get("/api/v1/vehicles/{id}/status", vehicleId).header("Authorization", supervisorToken))
+        mockMvc.perform(get("/api/v1/operational-statuses/{vehicleId}", vehicleId).header("Authorization", supervisorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("NOT_ENABLED"));
     }
@@ -113,20 +114,23 @@ class InspectionEvaluationFlowIntegrationTest {
     void anInspectionIsEvaluatedOnlyOnce() throws Exception {
         var inspectionId = completeAnInspectionWithFailedBrakes();
 
-        mockMvc.perform(post("/api/v1/inspections/{id}/evaluate", inspectionId).header("Authorization", supervisorToken))
+        mockMvc.perform(post("/api/v1/evaluations").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"inspectionId\": \"" + inspectionId + "\"}"))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void reportsAnInspectionThatIsNotCompleted() throws Exception {
-        mockMvc.perform(post("/api/v1/inspections/{id}/evaluate", UUID.randomUUID()).header("Authorization", supervisorToken))
+        mockMvc.perform(post("/api/v1/evaluations").header("Authorization", supervisorToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"inspectionId\": \"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("There is no completed inspection with this identifier."));
     }
 
     @Test
     void aDriverCannotEvaluateAnInspection() throws Exception {
-        mockMvc.perform(post("/api/v1/inspections/{id}/evaluate", UUID.randomUUID()).header("Authorization", driverToken))
+        mockMvc.perform(post("/api/v1/evaluations").header("Authorization", driverToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"inspectionId\": \"" + UUID.randomUUID() + "\"}"))
                 .andExpect(status().isForbidden());
     }
 }

@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public class LiftBlockCommandFromResourceAssembler {
 
-    public static LiftBlockCommand toCommandFromResource(UUID vehicleId, LiftBlockResource resource, UUID authorizedBy) {
-        return new LiftBlockCommand(new VehicleId(vehicleId), resource.reason(), authorizedBy);
+    public static LiftBlockCommand toCommandFromResource(LiftBlockResource resource, UUID authorizedBy) {
+        return new LiftBlockCommand(new VehicleId(resource.vehicleId()), resource.reason(), authorizedBy);
     }
 }

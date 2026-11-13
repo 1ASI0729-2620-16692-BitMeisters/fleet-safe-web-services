@@ -163,10 +163,40 @@ paths:
         '422':
           $ref: '#/components/responses/UnknownDocumentType'
 
-  /vehicles/{vehicleId}/documents/{documentId}/file:
+  /documents:
+    get:
+      tags: [Vehicle Documentation]
+      operationId: getVehicleDocuments
+      summary: List the documents of every vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Ordered by expiration date, with the status of today.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: expiresWithinDays
+          in: query
+          required: false
+          description: Only the documents that expire between today and this number of days.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 365
+      responses:
+        '200':
+          description: Documents of every vehicle.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleDocumentResource'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+
+  /documents/{id}/files:
     parameters:
-      - $ref: '#/components/parameters/VehicleId'
-      - $ref: '#/components/parameters/DocumentId'
+      - $ref: './common.yaml#/components/parameters/Id'
     post:
       tags: [Vehicle Documentation]
       operationId: attachVehicleDocumentFile
@@ -206,64 +236,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: './common.yaml#/components/schemas/Problem'
-
-  /documents:
-    get:
-      tags: [Vehicle Documentation]
-      operationId: getVehicleDocuments
-      summary: List the documents of every vehicle
-      description: >-
-        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Ordered by expiration date, with the status of today.
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-      responses:
-        '200':
-          description: Documents of every vehicle.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VehicleDocumentResource'
-        '401':
-          $ref: './common.yaml#/components/responses/Unauthorized'
-        '403':
-          $ref: './common.yaml#/components/responses/Forbidden'
-
-  /documents/expiring:
-    get:
-      tags: [Vehicle Documentation]
-      operationId: getExpiringDocuments
-      summary: List the documents about to expire
-      description: >-
-        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Documents that expire between today and the given
-        number of days, ordered by expiration date. Already expired documents are not included.
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-        - name: days
-          in: query
-          required: false
-          description: Size of the window, in days.
-          schema:
-            type: integer
-            minimum: 0
-            maximum: 365
-            default: 30
-      responses:
-        '200':
-          description: Documents about to expire.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VehicleDocumentResource'
-        '400':
-          $ref: './common.yaml#/components/responses/BadRequest'
-        '401':
-          $ref: './common.yaml#/components/responses/Unauthorized'
-        '403':
-          $ref: './common.yaml#/components/responses/Forbidden'
 
 components:
   parameters:

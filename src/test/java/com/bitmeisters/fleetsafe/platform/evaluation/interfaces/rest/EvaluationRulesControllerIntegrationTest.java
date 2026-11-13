@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,11 +76,13 @@ class EvaluationRulesControllerIntegrationTest {
     void anAdministratorDefinesAndDeactivatesARule() throws Exception {
         var id = defineBrakesRule();
 
-        mockMvc.perform(post("/api/v1/evaluation-rules/{id}/deactivation", id).header("Authorization", administrator))
+        mockMvc.perform(patch("/api/v1/evaluation-rules/{id}", id).header("Authorization", administrator)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"isActive\": false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isActive").value(false));
 
-        mockMvc.perform(post("/api/v1/evaluation-rules/{id}/deactivation", id).header("Authorization", administrator))
+        mockMvc.perform(patch("/api/v1/evaluation-rules/{id}", id).header("Authorization", administrator)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"isActive\": false}"))
                 .andExpect(status().isConflict());
     }
 
