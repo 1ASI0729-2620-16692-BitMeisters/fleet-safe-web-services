@@ -8,6 +8,7 @@ import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.InspectionItemId;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.domain.model.valueobjects.ItemSystem;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.rest.resources.CreateInspectionItemResource;
+import com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.rest.resources.DeactivateInspectionItemResource;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.rest.resources.InspectionItemResource;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.rest.resources.UpdateInspectionItemResource;
 import com.bitmeisters.fleetsafe.platform.preoperationalinspection.interfaces.rest.transform.CreateInspectionItemCommandFromResourceAssembler;
@@ -29,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -155,16 +157,16 @@ public class InspectionItemsController {
      * @param id the item UUID
      * @return 200 OK on success, or ProblemDetail on error
      */
-    @PostMapping("/{id}/deactivation")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    @Operation(summary = "Deactivate an inspection item", description = "Roles: ADMINISTRATOR. Deactivated items are excluded from active checklists.")
+    @Operation(summary = "Deactivate an inspection item", description = "Roles: ADMINISTRATOR. Send isActive false; deactivated items are excluded from active checklists.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Inspection item deactivated",
                     content = @Content(schema = @Schema(implementation = InspectionItemResource.class))),
             @ApiResponse(responseCode = "403", description = "The role does not allow this operation"),
             @ApiResponse(responseCode = "404", description = "Inspection item not found"),
             @ApiResponse(responseCode = "409", description = "The inspection item is already inactive")})
-    public ResponseEntity<?> deactivateInspectionItem(@PathVariable UUID id) {
+    public ResponseEntity<?> deactivateInspectionItem(@PathVariable UUID id, @Valid @RequestBody DeactivateInspectionItemResource resource) {
         var command = new DeactivateInspectionItemCommand(new InspectionItemId(id));
         var result = inspectionItemCommandService.handle(command);
         return ResponseEntityFromInspectionItemCommandResultAssembler.toResponseEntityFromResult(result, messageSource, HttpStatus.OK);

@@ -44,10 +44,10 @@ paths:
     $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results'
   /inspections/{id}/results/{resultId}:
     $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results~1{resultId}'
-  /inspections/{id}/results/{resultId}/observations:
-    $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results~1{resultId}~1observations'
-  /inspections/{id}/results/{resultId}/observations/{observationId}/evidences:
-    $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1results~1{resultId}~1observations~1{observationId}~1evidences'
+  /inspections/{id}/observations:
+    $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1observations'
+  /inspections/{id}/evidences:
+    $ref: './pre-operational-inspection.yaml#/paths/~1inspections~1{id}~1evidences'
   /evaluations:
     $ref: './evaluation-and-authorization.yaml#/paths/~1evaluations'
   /operational-statuses:

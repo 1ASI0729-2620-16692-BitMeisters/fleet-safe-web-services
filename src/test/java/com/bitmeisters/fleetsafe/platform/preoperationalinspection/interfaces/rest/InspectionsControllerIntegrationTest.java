@@ -110,9 +110,10 @@ class InspectionsControllerIntegrationTest {
     }
 
     private String addObservation(String inspectionId, String resultId) throws Exception {
-        var response = mockMvc.perform(post("/api/v1/inspections/{id}/results/{resultId}/observations", inspectionId, resultId)
+        var response = mockMvc.perform(post("/api/v1/inspections/{id}/observations", inspectionId)
                         .header("Authorization", driverToken)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"description\": \"The pedal feels soft.\"}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resultId\": \"" + resultId + "\", \"description\": \"The pedal feels soft.\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(response, "$.id");
@@ -124,8 +125,8 @@ class InspectionsControllerIntegrationTest {
         var resultId = registerObservedBrakes(inspectionId);
         var observationId = addObservation(inspectionId, resultId);
 
-        mockMvc.perform(multipart("/api/v1/inspections/{id}/results/{resultId}/observations/{observationId}/evidences",
-                        inspectionId, resultId, observationId)
+        mockMvc.perform(multipart("/api/v1/inspections/{id}/evidences", inspectionId)
+                        .param("observationId", observationId)
                         .file(new MockMultipartFile("file", "brakes.png", "image/png", new byte[] {1, 2, 3}))
                         .header("Authorization", driverToken))
                 .andExpect(status().isCreated())
@@ -159,8 +160,8 @@ class InspectionsControllerIntegrationTest {
         var resultId = registerObservedBrakes(inspectionId);
         var observationId = addObservation(inspectionId, resultId);
 
-        mockMvc.perform(multipart("/api/v1/inspections/{id}/results/{resultId}/observations/{observationId}/evidences",
-                        inspectionId, resultId, observationId)
+        mockMvc.perform(multipart("/api/v1/inspections/{id}/evidences", inspectionId)
+                        .param("observationId", observationId)
                         .file(new MockMultipartFile("file", "brakes.png", "image/png", new byte[] {1}))
                         .header("Authorization", driverToken))
                 .andExpect(status().isServiceUnavailable())
@@ -173,8 +174,8 @@ class InspectionsControllerIntegrationTest {
         var resultId = registerObservedBrakes(inspectionId);
         var observationId = addObservation(inspectionId, resultId);
 
-        mockMvc.perform(multipart("/api/v1/inspections/{id}/results/{resultId}/observations/{observationId}/evidences",
-                        inspectionId, resultId, observationId)
+        mockMvc.perform(multipart("/api/v1/inspections/{id}/evidences", inspectionId)
+                        .param("observationId", observationId)
                         .file(new MockMultipartFile("file", "notes.pdf", "application/pdf", new byte[] {1}))
                         .header("Authorization", driverToken))
                 .andExpect(status().isBadRequest());
