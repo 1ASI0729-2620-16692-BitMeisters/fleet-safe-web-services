@@ -3,9 +3,7 @@ info:
   title: FleetSafe API - Evaluation and Authorization
   version: 0.1.0
 paths:
-  /inspections/{id}/evaluate:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
+  /evaluations:
     post:
       tags: [Evaluation and Authorization]
       operationId: evaluateInspection
@@ -17,8 +15,14 @@ paths:
         the vehicle is ENABLED. An inspection can only be evaluated once.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluateInspectionResource'
       responses:
-        '200':
+        '201':
           description: Operational authorization produced by the evaluation.
           content:
             application/json:
@@ -53,12 +57,17 @@ paths:
                 status: 422
                 detail: The inspection has no results to evaluate.
 
-  /vehicles/{id}/status:
+  /operational-statuses/{vehicleId}:
     parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
+      - name: vehicleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     get:
       tags: [Evaluation and Authorization]
-      operationId: getCurrentAuthorization
+      operationId: getOperationalStatus
       summary: Get the current operational status of a vehicle
       description: >-
         Roles: any authenticated user of the company. Returns the latest operational authorization,
@@ -86,9 +95,7 @@ paths:
                 status: 404
                 detail: The vehicle has no operational authorization yet.
 
-  /vehicles/{id}/authorizations:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
+  /authorizations:
     get:
       tags: [Evaluation and Authorization]
       operationId: getAuthorizationHistoryByVehicle
@@ -98,6 +105,12 @@ paths:
         including the ones that lifted a block.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: vehicleId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Authorizations of the vehicle, newest first.
@@ -112,9 +125,7 @@ paths:
         '403':
           $ref: './common.yaml#/components/responses/Forbidden'
 
-  /vehicles/{id}/block-lifts:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
+  /block-lifts:
     post:
       tags: [Evaluation and Authorization]
       operationId: liftBlock
@@ -186,39 +197,6 @@ paths:
                 status: 409
                 detail: The vehicle is not blocked, so there is no block to lift.
 
-  /operational-authorizations/current:
-    get:
-      tags: [Evaluation and Authorization]
-      operationId: getCurrentAuthorizations
-      summary: List the current operational status of every vehicle
-      description: >-
-        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The latest authorization of each vehicle that has one,
-        newest first. A vehicle that was never evaluated does not appear. Filter by status to see, for
-        example, only the vehicles that are not enabled.
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [ENABLED, OBSERVED, NOT_ENABLED]
-      responses:
-        '200':
-          description: Current authorization of each vehicle, newest first.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OperationalAuthorizationResource'
-        '400':
-          description: The status is not one of the allowed values.
-          content:
-            application/problem+json:
-              schema:
-                $ref: './common.yaml#/components/schemas/Problem'
-  /operational-authorizations/overrides:
     get:
       tags: [Evaluation and Authorization]
       operationId: getOverridesByPeriod
@@ -265,6 +243,38 @@ paths:
         '403':
           $ref: './common.yaml#/components/responses/Forbidden'
 
+  /operational-statuses:
+    get:
+      tags: [Evaluation and Authorization]
+      operationId: getOperationalStatuses
+      summary: List the current operational status of every vehicle
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The latest authorization of each vehicle that has one,
+        newest first. A vehicle that was never evaluated does not appear. Filter by status to see, for
+        example, only the vehicles that are not enabled.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ENABLED, OBSERVED, NOT_ENABLED]
+      responses:
+        '200':
+          description: Current authorization of each vehicle, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OperationalAuthorizationResource'
+        '400':
+          description: The status is not one of the allowed values.
+          content:
+            application/problem+json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Problem'
   /evaluation-rules:
     get:
       tags: [Evaluation and Authorization]
@@ -359,11 +369,7 @@ paths:
                 title: Not Found
                 status: 404
                 detail: The evaluation rule was not found.
-
-  /evaluation-rules/{id}/deactivation:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
-    post:
+    patch:
       tags: [Evaluation and Authorization]
       operationId: deactivateEvaluationRule
       summary: Deactivate an evaluation rule
@@ -371,6 +377,12 @@ paths:
         Roles: ADMINISTRATOR. The rule stops applying to new evaluations; past evaluations keep it.
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEvaluationRuleResource'
       responses:
         '200':
           description: Rule deactivated.
@@ -457,8 +469,11 @@ components:
 
     LiftBlockResource:
       type: object
-      required: [reason]
+      required: [vehicleId, reason]
       properties:
+        vehicleId:
+          type: string
+          format: uuid
         reason:
           type: string
           minLength: 1
@@ -512,3 +527,18 @@ components:
           type: string
           maxLength: 500
           examples: [A failed brake system makes the vehicle unsafe to operate.]
+    EvaluateInspectionResource:
+      type: object
+      required: [inspectionId]
+      properties:
+        inspectionId:
+          type: string
+          format: uuid
+    UpdateEvaluationRuleResource:
+      type: object
+      required: [isActive]
+      description: A rule can only be deactivated.
+      properties:
+        isActive:
+          type: boolean
+          const: false
