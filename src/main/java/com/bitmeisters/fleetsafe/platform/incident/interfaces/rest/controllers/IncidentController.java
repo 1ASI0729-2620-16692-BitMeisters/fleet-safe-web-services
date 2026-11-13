@@ -4,18 +4,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandFailure;
 import com.bitmeisters.fleetsafe.platform.incident.application.commandservices.IncidentCommandService;
+import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentStatusCommand;
 import com.bitmeisters.fleetsafe.platform.incident.application.internal.outboundservices.acl.ExternalIamService;
 import com.bitmeisters.fleetsafe.platform.shared.application.internal.outboundservices.storage.FileStorageService;
 import com.bitmeisters.fleetsafe.platform.incident.application.queryservices.IncidentQueryService;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.aggregates.Incident;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.DeleteIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ReportIncidentCommand;
-import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.ResolveIncidentCommand;
+import com.bitmeisters.fleetsafe.platform.incident.interfaces.rest.resources.UpdateIncidentStatusResource;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.commands.UpdateIncidentCommand;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetCorrectiveActionsByIncidentIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentByIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentFollowUpsQuery;
-import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsByStatusQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsByVehicleIdQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetIncidentsQuery;
 import com.bitmeisters.fleetsafe.platform.incident.domain.model.queries.GetRepairsByIncidentIdQuery;
@@ -67,16 +67,28 @@ public class IncidentController {
         this.assembler = new IncidentAssembler(externalIamService::nameOf, fileStorageService::temporaryReadUrl);
     }
 
-    @Operation(summary = "List all incidents")
+    @Operation(summary = "List and filter incidents")
     @GetMapping
-    public ResponseEntity<Map<String, List<IncidentResource>>> getAll() {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsQuery())
-                .stream()
+    public ResponseEntity<Map<String, List<IncidentResource>>> getAll(
+            @RequestParam(required = false) UUID vehicleId,
+            @RequestParam(required = false) IncidentStatus status
+    ) {
+        List<Incident> incidents = vehicleId == null
+                ? queryService.handle(new GetIncidentsQuery())
+                : queryService.handle(
+                new GetIncidentsByVehicleIdQuery(vehicleId));
+
+        if (status != null) {
+            incidents = incidents.stream()
+                    .filter(incident -> incident.getStatus() == status)
+                    .toList();
+        }
+
+        List<IncidentResource> resources = incidents.stream()
                 .map(this::toResource)
                 .toList();
 
-        return ResponseEntity.ok(Map.of("incidents", incidents));
+        return ResponseEntity.ok(Map.of("incidents", resources));
     }
 
     @Operation(summary = "Get an incident")
@@ -89,48 +101,6 @@ public class IncidentController {
                 .<ResponseEntity<?>>map(incident ->
                         ResponseEntity.ok(toResource(incident)))
                 .orElseGet(() -> notFound("incident.error.not-found", locale));
-    }
-
-    @Operation(summary = "List incidents of a vehicle")
-    @GetMapping("/vehicle/{vehicleId}")
-    public ResponseEntity<Map<String, List<IncidentResource>>> getByVehicle(
-            @PathVariable UUID vehicleId
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByVehicleIdQuery(vehicleId))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
-    }
-
-    @Operation(summary = "List incidents by status")
-    @GetMapping("/status/{status}")
-    public ResponseEntity<Map<String, List<IncidentResource>>> getByStatus(
-            @PathVariable IncidentStatus status
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByStatusQuery(status))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
-    }
-
-    @Operation(summary = "Search incidents")
-    @GetMapping("/search")
-    public ResponseEntity<Map<String, List<IncidentResource>>> search(
-            @RequestParam UUID vehicleId
-    ) {
-        List<IncidentResource> incidents = queryService
-                .handle(new GetIncidentsByVehicleIdQuery(vehicleId))
-                .stream()
-                .map(this::toResource)
-                .toList();
-
-        return ResponseEntity.ok(Map.of("incidents", incidents));
     }
 
     @Operation(summary = "Report an incident")
@@ -184,16 +154,25 @@ public class IncidentController {
         );
     }
 
-    @Operation(summary = "Resolve an incident")
-    @PatchMapping("/{id}/resolve")
+    @Operation(summary = "Update incident status or resolve an incident")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('FLEET_SUPERVISOR', 'ADMINISTRATOR')")
-    public ResponseEntity<?> resolve(
+    public ResponseEntity<?> updateStatus(
             @PathVariable UUID id,
-            @RequestBody ResolveIncidentCommand command,
+            @RequestBody UpdateIncidentStatusResource resource,
             Locale locale
     ) {
-        if (!id.equals(command.incidentId())) {
-            return badRequest("incident.error.invalid-id", locale);
+        UpdateIncidentStatusCommand command;
+
+        try {
+            command = new UpdateIncidentStatusCommand(
+                    id,
+                    resource.status(),
+                    resource.resolutionType(),
+                    resource.resolvedAt()
+            );
+        } catch (IllegalArgumentException exception) {
+            return badRequest(exception.getMessage(), locale);
         }
 
         Result<Incident, IncidentCommandFailure> result =

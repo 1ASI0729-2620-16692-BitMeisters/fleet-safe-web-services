@@ -21,8 +21,13 @@ public class Repair {
     private RepairStatus status;
 
     public Repair(ScheduleRepairCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException(
+                    "incident.repair.error.command.required");
+        }
+
         this.incidentId = command.incidentId();
-        this.workshop = command.workshop();
+        this.workshop = command.workshop().trim();
         this.cost = command.cost();
         this.startedAt = command.startedAt();
         this.finishedAt = command.finishedAt();
@@ -46,6 +51,11 @@ public class Repair {
                         startedAt,
                         finishedAt));
 
+        if (status == null) {
+            throw new IllegalArgumentException(
+                    "incident.repair.error.status.required");
+        }
+
         repair.id = id;
         repair.status = status;
         return repair;
@@ -53,7 +63,8 @@ public class Repair {
 
     public void start() {
         if (this.status != RepairStatus.SCHEDULED) {
-            throw new IllegalStateException("incident.repair.error.invalid.status");
+            throw new IllegalStateException(
+                    "incident.repair.error.invalid-status");
         }
 
         this.startedAt = Timestamps.now();
@@ -61,18 +72,21 @@ public class Repair {
     }
 
     public void complete(Instant finishedAt) {
+        if (this.status != RepairStatus.SCHEDULED
+                && this.status != RepairStatus.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "incident.repair.error.invalid-status");
+        }
+
         if (finishedAt == null) {
-            throw new IllegalArgumentException("Repair completion date cannot be null");
-        }
-
-        if (this.status == RepairStatus.COMPLETED) {
-            throw new IllegalStateException("incident.repair.error.invalid.status");
-        }
-
-        if (this.startedAt != null && finishedAt.isBefore(this.startedAt)) {
             throw new IllegalArgumentException(
-                    "Repair completion date cannot be before its start date"
-            );
+                    "incident.repair.error.finished-at.required");
+        }
+
+        if (this.startedAt != null
+                && finishedAt.isBefore(this.startedAt)) {
+            throw new IllegalArgumentException(
+                    "incident.repair.error.finished-at.invalid");
         }
 
         this.finishedAt = finishedAt;

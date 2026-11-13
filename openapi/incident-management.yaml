@@ -51,7 +51,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
     get:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: getIncidentType
       summary: Get an incident type
       description: 'Roles: any authenticated user of the company.'
@@ -67,7 +67,7 @@ paths:
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
     put:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: updateIncidentType
       summary: Update an incident type
       description: 'Roles: ADMINISTRATOR. The identifier of the body must match the one of the path.'
@@ -95,12 +95,25 @@ paths:
 
   /incidents:
     get:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: getIncidents
       summary: List the incidents
       description: 'Roles: any authenticated user of the company.'
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+        - name: vehicleId
+          in: query
+          required: false
+          description: Filter incidents by vehicle ID.
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          description: Filter incidents by status.
+          schema:
+            $ref: '#/components/schemas/IncidentStatus'
       responses:
         '200':
           description: Incidents with their corrective actions, repairs and follow-ups.
@@ -111,7 +124,7 @@ paths:
         '401':
           $ref: './common.yaml#/components/responses/Unauthorized'
     post:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: reportIncident
       summary: Report an incident
       description: >-
@@ -143,73 +156,6 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Problem'
 
-  /incidents/search:
-    get:
-      tags: [Incident Management]
-      operationId: searchIncidentsByVehicle
-      summary: List the incidents of a vehicle
-      description: 'Roles: any authenticated user of the company. Same result as /incidents/vehicle/{vehicleId}.'
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-        - name: vehicleId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Incidents of the vehicle.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IncidentsResource'
-
-  /incidents/vehicle/{vehicleId}:
-    get:
-      tags: [Incident Management]
-      operationId: getIncidentsByVehicle
-      summary: List the incidents of a vehicle
-      description: 'Roles: any authenticated user of the company.'
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-        - name: vehicleId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Incidents of the vehicle.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IncidentsResource'
-
-  /incidents/status/{status}:
-    get:
-      tags: [Incident Management]
-      operationId: getIncidentsByStatus
-      summary: List the incidents in a status
-      description: 'Roles: any authenticated user of the company.'
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-        - name: status
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/IncidentStatus'
-      responses:
-        '200':
-          description: Incidents in the status.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IncidentsResource'
-        '400':
-          $ref: './common.yaml#/components/responses/BadRequest'
-
   /incidents/{id}:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
@@ -229,8 +175,39 @@ paths:
                 $ref: '#/components/schemas/IncidentResource'
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
+    patch:
+      tags: [ Incident Management ]
+      operationId: updateIncidentStatus
+      summary: Update the incident status or resolve it
+      description: >-
+        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Use IN_REVIEW to start reviewing
+        an incident, or RESOLVED to resolve it. Resolution requires resolutionType
+        and resolvedAt.
+      parameters:
+        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIncidentStatusResource'
+      responses:
+        '200':
+          description: Incident status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          $ref: './common.yaml#/components/responses/Conflict'
     put:
-      tags: [Incident Management]
+      tags: [ Incident Management ]
       operationId: updateIncident
       summary: Update an incident
       description: >-
@@ -272,40 +249,6 @@ paths:
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
 
-  /incidents/{id}/resolve:
-    parameters:
-      - $ref: './common.yaml#/components/parameters/Id'
-    patch:
-      tags: [Incident Management]
-      operationId: resolveIncident
-      summary: Resolve an incident
-      description: >-
-        Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Only a REGISTERED or IN_REVIEW incident can be
-        resolved; resolving it again answers 409.
-      parameters:
-        - $ref: './common.yaml#/components/parameters/AcceptLanguage'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResolveIncidentResource'
-      responses:
-        '200':
-          description: Incident resolved.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/IncidentResource'
-        '400':
-          $ref: './common.yaml#/components/responses/BadRequest'
-        '403':
-          $ref: './common.yaml#/components/responses/Forbidden'
-        '404':
-          $ref: './common.yaml#/components/responses/NotFound'
-        '409':
-          $ref: './common.yaml#/components/responses/Conflict'
-
   /incidents/{id}/corrective-actions:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
@@ -336,19 +279,13 @@ paths:
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
 
-  /incidents/{id}/corrective-actions/{correctiveActionId}/evidence:
+  /incidents/{id}/evidences:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
-      - name: correctiveActionId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
     post:
       tags: [Incident Management]
       operationId: attachCorrectiveActionEvidence
-      summary: Attach the evidence of a corrective action
+      summary: Attach evidence to a corrective action
       description: >-
         Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Stores a JPEG, PNG or PDF file in a private container;
         the response links to it for one hour.
@@ -360,11 +297,14 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [file]
+              required: [file, correctiveActionId]
               properties:
                 file:
                   type: string
                   format: binary
+                correctiveActionId:
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Evidence attached.
@@ -415,7 +355,7 @@ paths:
         '404':
           $ref: './common.yaml#/components/responses/NotFound'
 
-  /incidents/{id}/repairs/{repairId}/complete:
+  /incidents/{id}/repairs/{repairId}:
     parameters:
       - $ref: './common.yaml#/components/parameters/Id'
       - name: repairId
@@ -426,9 +366,9 @@ paths:
           format: uuid
     patch:
       tags: [Incident Management]
-      operationId: completeRepair
-      summary: Complete a repair
-      description: 'Roles: FLEET_SUPERVISOR, ADMINISTRATOR. Completing it again answers 409.'
+      operationId: updateRepair
+      summary: Update a repair
+      description: 'Roles: FLEET_SUPERVISOR, ADMINISTRATOR. The repair can be completed only once.'
       parameters:
         - $ref: './common.yaml#/components/parameters/AcceptLanguage'
       requestBody:
@@ -436,14 +376,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CompleteRepairResource'
+              $ref: '#/components/schemas/UpdateRepairResource'
       responses:
         '200':
-          description: Repair completed.
+          description: Repair updated.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RepairResource'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
         '403':
           $ref: './common.yaml#/components/responses/Forbidden'
         '404':
@@ -504,6 +446,7 @@ components:
         name: {type: string, examples: [Mechanical failure]}
         description: {type: string}
         isActive: {type: boolean}
+
     RegisterIncidentTypeResource:
       type: object
       required: [code, name, description]
@@ -511,6 +454,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: string}
+
     UpdateIncidentTypeResource:
       type: object
       required: [incidentTypeId, code, name, description, active]
@@ -532,6 +476,29 @@ components:
         description: {type: string}
         severity: {$ref: '#/components/schemas/IncidentSeverity'}
         reportedBy: {type: string, format: uuid}
+
+    UpdateIncidentStatusResource:
+      oneOf:
+        - type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              const: IN_REVIEW
+          additionalProperties: false
+        - type: object
+          required: [status, resolutionType, resolvedAt]
+          properties:
+            status:
+              type: string
+              const: RESOLVED
+            resolutionType:
+              type: string
+            resolvedAt:
+              type: string
+              format: date-time
+          additionalProperties: false
+
     UpdateIncidentResource:
       allOf:
         - $ref: '#/components/schemas/ReportIncidentResource'
@@ -539,13 +506,7 @@ components:
           required: [incidentId]
           properties:
             incidentId: {type: string, format: uuid}
-    ResolveIncidentResource:
-      type: object
-      required: [incidentId, resolutionType, resolvedAt]
-      properties:
-        incidentId: {type: string, format: uuid}
-        resolutionType: {type: string, examples: [REPAIRED]}
-        resolvedAt: {type: string, format: date-time}
+
     IncidentResource:
       type: object
       properties:
@@ -583,6 +544,7 @@ components:
         performedBy: {type: string, format: uuid}
         performedAt: {type: string, format: date-time}
         evidenceUrl: {type: [string, 'null']}
+
     CorrectiveActionResource:
       type: object
       properties:
@@ -603,13 +565,16 @@ components:
         cost: {type: number, minimum: 0}
         startedAt: {type: string, format: date-time}
         finishedAt: {type: [string, 'null'], format: date-time}
-    CompleteRepairResource:
+    UpdateRepairResource:
       type: object
-      required: [incidentId, repairId, finishedAt]
+      required: [status, finishedAt]
       properties:
-        incidentId: {type: string, format: uuid}
-        repairId: {type: string, format: uuid}
-        finishedAt: {type: string, format: date-time}
+        status:
+          type: string
+          enum: [COMPLETED]
+        finishedAt:
+          type: string
+          format: date-time
     RepairResource:
       type: object
       properties:
@@ -629,6 +594,7 @@ components:
         note: {type: string}
         createdBy: {type: string, format: uuid}
         createdAt: {type: string, format: date-time}
+
     IncidentFollowUpResource:
       type: object
       properties:
@@ -638,12 +604,14 @@ components:
         createdBy: {type: string, format: uuid}
         createdByName: {type: [string, 'null'], examples: [Ana Quispe]}
         createdAt: {type: string, format: date-time}
+
     IncidentTypesResource:
       type: object
       properties:
         incidentTypes:
           type: array
           items: {$ref: '#/components/schemas/IncidentTypeResource'}
+
     IncidentsResource:
       type: object
       properties:
