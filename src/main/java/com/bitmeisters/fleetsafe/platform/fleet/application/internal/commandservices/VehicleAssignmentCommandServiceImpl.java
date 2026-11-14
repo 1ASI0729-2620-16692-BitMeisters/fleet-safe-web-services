@@ -24,10 +24,7 @@ public class VehicleAssignmentCommandServiceImpl implements VehicleAssignmentCom
     private final DriverRepository driverRepository;
     private final FleetCalendar fleetCalendar;
 
-    public VehicleAssignmentCommandServiceImpl(VehicleAssignmentRepository vehicleAssignmentRepository,
-                                               VehicleRepository vehicleRepository,
-                                               DriverRepository driverRepository,
-                                               FleetCalendar fleetCalendar) {
+    public VehicleAssignmentCommandServiceImpl(VehicleAssignmentRepository vehicleAssignmentRepository, VehicleRepository vehicleRepository, DriverRepository driverRepository, FleetCalendar fleetCalendar) {
         this.vehicleAssignmentRepository = vehicleAssignmentRepository;
         this.vehicleRepository = vehicleRepository;
         this.driverRepository = driverRepository;
