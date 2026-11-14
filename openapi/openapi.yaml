@@ -32,8 +32,14 @@ paths:
     $ref: './identity-and-access.yaml#/paths/~1users'
   /users/{id}:
     $ref: './identity-and-access.yaml#/paths/~1users~1{id}'
+  /drivers:
+    $ref: './fleet-management.yaml#/paths/~1drivers'
   /drivers/me/vehicle-assignment:
     $ref: './fleet-management.yaml#/paths/~1drivers~1me~1vehicle-assignment'
+  /vehicle-assignments:
+    $ref: './fleet-management.yaml#/paths/~1vehicle-assignments'
+  /vehicle-assignments/{id}/close:
+    $ref: './fleet-management.yaml#/paths/~1vehicle-assignments~1{id}~1close'
   /inspection-items:
     $ref: './pre-operational-inspection.yaml#/paths/~1inspection-items'
   /inspections:
